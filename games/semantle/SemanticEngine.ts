@@ -1,0 +1,285 @@
+import { Logger } from '../../core/utils/Logger';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+
+export interface WordSimilarity {
+  word: string;
+  similarity: number;
+  rank?: number;
+}
+
+export interface SemanticData {
+  targetWord: string;
+  rankings: Map<string, number>; // word -> rank (1-1000)
+  similarities: Map<string, number>; // word -> similarity score (0-1)
+}
+
+/**
+ * Semantic engine for calculating word similarity in Semantle
+ * Supports both pre-computed rankings and dynamic similarity calculation
+ */
+export class SemanticEngine {
+  private logger: Logger;
+  private wordVectors: Map<string, number[]> = new Map();
+  private precomputedRankings: Map<string, Map<string, number>> = new Map();
+  private vocabulary: Set<string> = new Set();
+
+  constructor() {
+    this.logger = new Logger('SemanticEngine');
+  }
+
+  /**
+   * Initialize the semantic engine with word data
+   */
+  async initialize(dataPath?: string): Promise<void> {
+    try {
+      this.logger.info('Initializing semantic engine...');
+      
+      // Try to load pre-computed data first
+      await this.loadPrecomputedData(dataPath);
+      
+      // If no pre-computed data, load word vectors
+      if (this.precomputedRankings.size === 0) {
+        await this.loadWordVectors(dataPath);
+      }
+      
+      this.logger.info(`Semantic engine initialized with ${this.vocabulary.size} words`);
+    } catch (error) {
+      this.logger.warn('Failed to load semantic data, using mock data:', error);
+      this.loadMockData();
+    }
+  }
+
+  /**
+   * Get semantic similarity data for a target word
+   */
+  getSemanticData(targetWord: string): SemanticData {
+    const rankings = new Map<string, number>();
+    const similarities = new Map<string, number>();
+
+    // Use pre-computed rankings if available
+    const precomputed = this.precomputedRankings.get(targetWord.toLowerCase());
+    if (precomputed) {
+      precomputed.forEach((rank, word) => {
+        rankings.set(word, rank);
+        // Convert rank to similarity score (higher rank = lower similarity)
+        similarities.set(word, Math.max(0, 1 - (rank / 1000)));
+      });
+    } else {
+      // Calculate similarities dynamically
+      this.calculateDynamicSimilarities(targetWord, rankings, similarities);
+    }
+
+    return {
+      targetWord: targetWord.toLowerCase(),
+      rankings,
+      similarities
+    };
+  }
+
+  /**
+   * Calculate similarity between two words
+   */
+  calculateSimilarity(word1: string, word2: string): number {
+    const vec1 = this.wordVectors.get(word1.toLowerCase());
+    const vec2 = this.wordVectors.get(word2.toLowerCase());
+
+    if (!vec1 || !vec2) {
+      return 0;
+    }
+
+    return this.cosineSimilarity(vec1, vec2);
+  }
+
+  /**
+   * Check if a word is in the vocabulary
+   */
+  isValidWord(word: string): boolean {
+    return this.vocabulary.has(word.toLowerCase());
+  }
+
+  /**
+   * Get word ranking for a target word
+   */
+  getWordRank(targetWord: string, guessWord: string): number | null {
+    const precomputed = this.precomputedRankings.get(targetWord.toLowerCase());
+    if (precomputed) {
+      return precomputed.get(guessWord.toLowerCase()) || null;
+    }
+
+    // Calculate dynamic ranking
+    const similarity = this.calculateSimilarity(targetWord, guessWord);
+    if (similarity === 0) return null;
+
+    // Convert similarity to approximate rank (this is rough)
+    return Math.max(1, Math.round((1 - similarity) * 1000));
+  }
+
+  /**
+   * Load pre-computed word rankings from file
+   */
+  private async loadPrecomputedData(dataPath?: string): Promise<void> {
+    const filePath = dataPath || path.join(__dirname, '../../data/dictionaries/word-rankings.json');
+    
+    try {
+      const data = await fs.readFile(filePath, 'utf-8');
+      const rankings = JSON.parse(data);
+      
+      Object.entries(rankings).forEach(([targetWord, wordRanks]) => {
+        const rankMap = new Map<string, number>();
+        Object.entries(wordRanks as Record<string, number>).forEach(([word, rank]) => {
+          rankMap.set(word, rank);
+          this.vocabulary.add(word);
+        });
+        this.precomputedRankings.set(targetWord, rankMap);
+        this.vocabulary.add(targetWord);
+      });
+      
+      this.logger.info(`Loaded pre-computed rankings for ${this.precomputedRankings.size} target words`);
+    } catch (error) {
+      this.logger.debug('No pre-computed rankings found:', error);
+    }
+  }
+
+  /**
+   * Load word vectors from file (GloVe format)
+   */
+  private async loadWordVectors(dataPath?: string): Promise<void> {
+    const filePath = dataPath || path.join(__dirname, '../../data/dictionaries/semantic-vectors.txt');
+    
+    try {
+      const data = await fs.readFile(filePath, 'utf-8');
+      const lines = data.split('\n');
+      
+      for (const line of lines) {
+        if (line.trim()) {
+          const parts = line.split(' ');
+          const word = parts[0];
+          
+          if (word && parts.length > 1) {
+            const vector = parts.slice(1).map(Number);
+            
+            if (vector.length > 0 && !vector.some(isNaN)) {
+              this.wordVectors.set(word, vector);
+              this.vocabulary.add(word);
+            }
+          }
+        }
+      }
+      
+      this.logger.info(`Loaded ${this.wordVectors.size} word vectors`);
+    } catch (error) {
+      this.logger.debug('No word vectors found:', error);
+    }
+  }
+
+  /**
+   * Load mock data for development/testing
+   */
+  private loadMockData(): void {
+    this.logger.info('Loading mock semantic data for development');
+    
+    // Mock vocabulary
+    const mockWords = [
+      'cat', 'dog', 'animal', 'pet', 'kitten', 'puppy', 'feline', 'canine',
+      'house', 'home', 'building', 'structure', 'dwelling', 'residence',
+      'car', 'vehicle', 'automobile', 'truck', 'transportation',
+      'book', 'read', 'story', 'novel', 'literature', 'text',
+      'water', 'liquid', 'drink', 'ocean', 'sea', 'river',
+      'food', 'eat', 'meal', 'dinner', 'lunch', 'breakfast'
+    ];
+
+    mockWords.forEach(word => this.vocabulary.add(word));
+
+    // Mock rankings for 'cat'
+    const catRankings = new Map([
+      ['kitten', 1],
+      ['feline', 2],
+      ['pet', 3],
+      ['animal', 8],
+      ['dog', 15],
+      ['puppy', 25],
+      ['canine', 45],
+      ['house', 500],
+      ['car', 800],
+      ['water', 900]
+    ]);
+    
+    this.precomputedRankings.set('cat', catRankings);
+
+    // Mock rankings for 'house'
+    const houseRankings = new Map([
+      ['home', 1],
+      ['building', 2],
+      ['dwelling', 3],
+      ['residence', 5],
+      ['structure', 12],
+      ['car', 200],
+      ['cat', 500],
+      ['water', 700]
+    ]);
+    
+    this.precomputedRankings.set('house', houseRankings);
+
+    this.logger.info('Mock data loaded successfully');
+  }
+
+  /**
+   * Calculate dynamic similarities when no pre-computed data exists
+   */
+  private calculateDynamicSimilarities(
+    targetWord: string, 
+    rankings: Map<string, number>, 
+    similarities: Map<string, number>
+  ): void {
+    const targetVector = this.wordVectors.get(targetWord.toLowerCase());
+    if (!targetVector) return;
+
+    const wordSimilarities: Array<{ word: string; similarity: number }> = [];
+
+    // Calculate similarity with all words in vocabulary
+    this.vocabulary.forEach(word => {
+      if (word !== targetWord.toLowerCase()) {
+        const similarity = this.calculateSimilarity(targetWord, word);
+        if (similarity > 0) {
+          wordSimilarities.push({ word, similarity });
+        }
+      }
+    });
+
+    // Sort by similarity (highest first) and assign ranks
+    wordSimilarities
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, 1000) // Top 1000 only
+      .forEach((item, index) => {
+        const rank = index + 1;
+        rankings.set(item.word, rank);
+        similarities.set(item.word, item.similarity);
+      });
+  }
+
+  /**
+   * Calculate cosine similarity between two vectors
+   */
+  private cosineSimilarity(vec1: number[], vec2: number[]): number {
+    if (vec1.length !== vec2.length) return 0;
+
+    let dotProduct = 0;
+    let norm1 = 0;
+    let norm2 = 0;
+
+    for (let i = 0; i < vec1.length; i++) {
+      const v1 = vec1[i];
+      const v2 = vec2[i];
+      
+      if (v1 !== undefined && v2 !== undefined) {
+        dotProduct += v1 * v2;
+        norm1 += v1 * v1;
+        norm2 += v2 * v2;
+      }
+    }
+
+    const magnitude = Math.sqrt(norm1) * Math.sqrt(norm2);
+    return magnitude === 0 ? 0 : dotProduct / magnitude;
+  }
+}

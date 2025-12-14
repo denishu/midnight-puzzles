@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # Shared PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: puzzle_bots
+      POSTGRES_USER: puzzle_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U puzzle_user -d puzzle_bots"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Semantle Bot
+  semantle-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.semantle
+    environment:
+      - NODE_ENV=production
+      - SEMANTLE_BOT_TOKEN=${SEMANTLE_BOT_TOKEN}
+      - SEMANTLE_CLIENT_ID=${SEMANTLE_CLIENT_ID}
+      - DATABASE_TYPE=postgresql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=puzzle_bots
+      - DB_USER=puzzle_user
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Travle Bot
+  travle-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.travle
+    environment:
+      - NODE_ENV=production
+      - TRAVLE_BOT_TOKEN=${TRAVLE_BOT_TOKEN}
+      - TRAVLE_CLIENT_ID=${TRAVLE_CLIENT_ID}
+      - DATABASE_TYPE=postgresql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=puzzle_bots
+      - DB_USER=puzzle_user
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Duotrigordle Bot
+  duotrigordle-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.duotrigordle
+    environment:
+      - NODE_ENV=production
+      - DUOTRIGORDLE_BOT_TOKEN=${DUOTRIGORDLE_BOT_TOKEN}
+      - DUOTRIGORDLE_CLIENT_ID=${DUOTRIGORDLE_CLIENT_ID}
+      - DATABASE_TYPE=postgresql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=puzzle_bots
+      - DB_USER=puzzle_user
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

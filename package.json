@@ -1,0 +1,66 @@
+{
+  "name": "discord-puzzle-bot-suite",
+  "version": "1.0.0",
+  "description": "A Discord bot suite providing three daily puzzle games: Semantle, Travle, and Duotrigordle",
+  "main": "dist/bot/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start:semantle": "node dist/bot/semantle-bot.js",
+    "start:travle": "node dist/bot/travle-bot.js",
+    "start:duotrigordle": "node dist/bot/duotrigordle-bot.js",
+    "dev:semantle": "ts-node bot/semantle-bot.ts",
+    "dev:travle": "ts-node bot/travle-bot.ts",
+    "dev:duotrigordle": "ts-node bot/duotrigordle-bot.ts",
+    "test-bot": "ts-node test-bot.ts",
+    "test-semantle": "ts-node test-semantle.ts",
+    "deploy:semantle": "ts-node -e \"import('./bot/semantle-bot').then(m => new m.default().deployCommands())\"",
+    "deploy:travle": "ts-node -e \"import('./bot/travle-bot').then(m => new m.default().deployCommands())\"",
+    "deploy:duotrigordle": "ts-node -e \"import('./bot/duotrigordle-bot').then(m => new m.default().deployCommands())\"",
+    "test": "jest --run",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage --run",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "migrate": "node dist/core/storage/migrations/migrate.js",
+    "migrate:dev": "ts-node core/storage/migrations/migrate.ts"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "puzzle",
+    "games",
+    "semantle",
+    "travle",
+    "duotrigordle",
+    "wordle"
+  ],
+  "author": "Discord Puzzle Bot Suite",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "sqlite3": "^5.1.6",
+    "pg": "^8.11.3",
+    "pg-pool": "^3.6.1",
+    "dotenv": "^16.3.1",
+    "winston": "^3.11.0",
+    "node-cron": "^3.0.3",
+    "ajv": "^8.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/pg": "^8.10.9",
+    "@types/sqlite3": "^3.1.11",
+    "@types/jest": "^29.5.8",
+    "@typescript-eslint/eslint-plugin": "^6.13.2",
+    "@typescript-eslint/parser": "^6.13.2",
+    "eslint": "^8.55.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "fast-check": "^3.15.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
