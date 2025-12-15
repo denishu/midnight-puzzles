@@ -87,7 +87,9 @@
   - **Property 4: Completed game protection**
   - **Validates: Requirements 1.4**
 
-- [ ] 5. Implement Semantle game module
+- [x] 5. Implement Semantle game module
+
+
   - Create SemanticEngine for word similarity calculations
   - Build WordRankingService for top-1000 similarity management
   - Implement SemanticGameState for tracking user progress
@@ -109,6 +111,13 @@
 - [ ]* 5.4 Write property test for guess history preservation
   - **Property 8: Guess history preservation**
   - **Validates: Requirements 2.5**
+
+- [ ] 5.5. Implement target word selection system for Semantle
+  - Create curated target word list filtering out proper nouns and inappropriate words
+  - Build TargetWordSelector for daily word generation
+  - Implement word eligibility validation based on frequency and common usage
+  - Set up manual blacklist for proper nouns and technical terms
+  - _Requirements: 2.1_
 
 - [ ] 6. Implement Travle game module
   - Create CountryGraph for world map adjacency representation

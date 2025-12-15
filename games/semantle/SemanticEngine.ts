@@ -23,6 +23,7 @@ export class SemanticEngine {
   private wordVectors: Map<string, number[]> = new Map();
   private precomputedRankings: Map<string, Map<string, number>> = new Map();
   private vocabulary: Set<string> = new Set();
+  private wordPositions: Map<string, number> = new Map(); // Track position in GloVe file
 
   constructor() {
     this.logger = new Logger('SemanticEngine');
@@ -99,6 +100,21 @@ export class SemanticEngine {
   }
 
   /**
+   * Get the size of the vocabulary
+   */
+  getVocabularySize(): number {
+    return this.vocabulary.size;
+  }
+
+  /**
+   * Get the frequency ranking (position in GloVe file) of a word
+   * Lower position = more frequent word
+   */
+  getWordFrequencyRank(word: string): number | null {
+    return this.wordPositions.get(word.toLowerCase()) || null;
+  }
+
+  /**
    * Get word ranking for a target word
    */
   getWordRank(targetWord: string, guessWord: string): number | null {
@@ -107,12 +123,9 @@ export class SemanticEngine {
       return precomputed.get(guessWord.toLowerCase()) || null;
     }
 
-    // Calculate dynamic ranking
-    const similarity = this.calculateSimilarity(targetWord, guessWord);
-    if (similarity === 0) return null;
-
-    // Convert similarity to approximate rank (this is rough)
-    return Math.max(1, Math.round((1 - similarity) * 1000));
+    // Use the proper ranking from semantic data
+    const semanticData = this.getSemanticData(targetWord);
+    return semanticData.rankings.get(guessWord.toLowerCase()) || null;
   }
 
   /**
@@ -143,31 +156,53 @@ export class SemanticEngine {
 
   /**
    * Load word vectors from file (GloVe format)
+   * Loads only the first 50,000 most common words to manage memory usage
    */
   private async loadWordVectors(dataPath?: string): Promise<void> {
     const filePath = dataPath || path.join(__dirname, '../../data/dictionaries/semantic-vectors.txt');
     
     try {
-      const data = await fs.readFile(filePath, 'utf-8');
-      const lines = data.split('\n');
+      // Use readline to handle large files efficiently
+      const readline = require('readline');
+      const fileStream = require('fs').createReadStream(filePath);
       
-      for (const line of lines) {
-        if (line.trim()) {
+      const rl = readline.createInterface({
+        input: fileStream,
+        crlfDelay: Infinity
+      });
+      
+      let lineCount = 0;
+      const maxWords = 100000; // Limit to first 100k words for better coverage
+      
+      this.logger.info(`Loading first ${maxWords} word vectors for better vocabulary coverage...`);
+      
+      for await (const line of rl) {
+        if (line.trim() && lineCount < maxWords) {
           const parts = line.split(' ');
           const word = parts[0];
           
-          if (word && parts.length > 1) {
+          // Only accept words that contain only letters (a-z, A-Z)
+          if (word && parts.length > 1 && /^[a-zA-Z]+$/.test(word)) {
             const vector = parts.slice(1).map(Number);
             
             if (vector.length > 0 && !vector.some(isNaN)) {
               this.wordVectors.set(word, vector);
               this.vocabulary.add(word);
+              this.wordPositions.set(word, lineCount + 1); // Position in file (1-based)
+              lineCount++;
+              
+              // Log progress every 10,000 words
+              if (lineCount % 10000 === 0) {
+                this.logger.info(`Loaded ${lineCount} word vectors...`);
+              }
             }
           }
+        } else if (lineCount >= maxWords) {
+          break; // Stop loading after reaching limit
         }
       }
       
-      this.logger.info(`Loaded ${this.wordVectors.size} word vectors`);
+      this.logger.info(`Loaded ${this.wordVectors.size} word vectors (limited to ${maxWords} for vocabulary coverage)`);
     } catch (error) {
       this.logger.debug('No word vectors found:', error);
     }

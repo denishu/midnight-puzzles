@@ -1,4 +1,4 @@
-import { SemanticEngine } from './games/semantle/SemanticEngine';
+import { SemanticEngine } from './SemanticEngine';
 
 async function testSemanticEngine() {
   console.log('🧠 Testing Semantic Engine...\n');

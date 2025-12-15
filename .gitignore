@@ -47,5 +47,11 @@ temp/
 # Test artifacts
 .jest/
 
+# Large data files
+data/dictionaries/semantic-vectors.txt
+data/dictionaries/glove.*.txt
+*.vec
+*.bin
+
 # Docker
 .dockerignore

@@ -13,6 +13,7 @@
     "dev:duotrigordle": "ts-node bot/duotrigordle-bot.ts",
     "test-bot": "ts-node test-bot.ts",
     "test-semantle": "ts-node test-semantle.ts",
+    "setup-semantic-data": "powershell -ExecutionPolicy Bypass -File scripts/setup-semantic-data.ps1",
     "deploy:semantle": "ts-node -e \"import('./bot/semantle-bot').then(m => new m.default().deployCommands())\"",
     "deploy:travle": "ts-node -e \"import('./bot/travle-bot').then(m => new m.default().deployCommands())\"",
     "deploy:duotrigordle": "ts-node -e \"import('./bot/duotrigordle-bot').then(m => new m.default().deployCommands())\"",
