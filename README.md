@@ -198,4 +198,4 @@ docker run -d --env-file .env duotrigordle-bot
 MIT License - see LICENSE file for details.
 
 ---
-*Built with TypeScript and Discord.js*
+*Built with TypeScript and Discord.js* ✨
