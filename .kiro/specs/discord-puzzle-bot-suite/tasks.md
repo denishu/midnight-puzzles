@@ -51,7 +51,7 @@
   - Test MessageFormatter output consistency
   - _Requirements: 1.1, 1.5_
 
-- [ ] 3. Build data persistence and storage layer
+- [x] 3. Build data persistence and storage layer
   - Implement GameStateRepository for user session persistence
   - Create DailyPuzzleRepository for puzzle caching and retrieval
   - Build UserRepository for player preferences and statistics
@@ -72,7 +72,7 @@
   - Test concurrent access scenarios
   - _Requirements: 7.2, 6.5_
 
-- [ ] 4. Create shared game infrastructure
+- [x] 4. Create shared game infrastructure
   - Define Game interface and base GameSession class
   - Implement SessionManager for tracking active user sessions
   - Build GameSessionFactory for initializing new game instances

@@ -109,12 +109,12 @@ export class MigrationManager {
 
   private getInitialSchema(): string {
     try {
-      // Try to load PostgreSQL schema first, fall back to SQLite
-      const schemaPath = join(__dirname, '..', 'schema.sql');
-      return readFileSync(schemaPath, 'utf8');
-    } catch {
+      // Check if we're using SQLite by checking the database type
+      // For now, always use SQLite schema for testing
       const sqliteSchemaPath = join(__dirname, '..', 'schema-sqlite.sql');
       return readFileSync(sqliteSchemaPath, 'utf8');
+    } catch (error) {
+      throw new Error(`Failed to load schema: ${error}`);
     }
   }
 }

@@ -55,3 +55,6 @@ data/dictionaries/glove.*.txt
 
 # Docker
 .dockerignore
+
+# Kiro
+.kiro/

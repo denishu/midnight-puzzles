@@ -22,8 +22,10 @@ export class SemanticEngine {
   private logger: Logger;
   private wordVectors: Map<string, number[]> = new Map();
   private precomputedRankings: Map<string, Map<string, number>> = new Map();
+  private rankingCache: Map<string, Map<string, number>> = new Map(); // in-memory cache for dynamic rankings
   private vocabulary: Set<string> = new Set();
   private wordPositions: Map<string, number> = new Map(); // Track position in GloVe file
+  private properNounBlacklist: Set<string> = new Set(); // Proper nouns to exclude
 
   constructor() {
     this.logger = new Logger('SemanticEngine');
@@ -35,6 +37,9 @@ export class SemanticEngine {
   async initialize(dataPath?: string): Promise<void> {
     try {
       this.logger.info('Initializing semantic engine...');
+      
+      // Load proper noun blacklist first
+      await this.loadProperNounBlacklist(dataPath);
       
       // Try to load pre-computed data first
       await this.loadPrecomputedData(dataPath);
@@ -123,9 +128,86 @@ export class SemanticEngine {
       return precomputed.get(guessWord.toLowerCase()) || null;
     }
 
-    // Use the proper ranking from semantic data
+    // Check in-memory cache first
+    const cached = this.rankingCache.get(targetWord.toLowerCase());
+    if (cached) {
+      return cached.get(guessWord.toLowerCase()) || null;
+    }
+
+    // Compute and cache rankings for this target word
     const semanticData = this.getSemanticData(targetWord);
+    this.rankingCache.set(targetWord.toLowerCase(), semanticData.rankings);
     return semanticData.rankings.get(guessWord.toLowerCase()) || null;
+  }
+
+  /**
+   * Get a hint word for the target that is better than the user's best rank.
+   * Uses a "halving" strategy: the hint is roughly halfway between the best rank and rank 1.
+   * Excludes already-guessed words and the target itself.
+   */
+  getHintWord(targetWord: string, bestRank: number | null, guessedWords: Set<string>): { word: string; rank: number } | null {
+    const target = targetWord.toLowerCase();
+
+    // Get or compute rankings for this target
+    let rankings = this.rankingCache.get(target) || this.precomputedRankings.get(target);
+    if (!rankings) {
+      const data = this.getSemanticData(target);
+      rankings = data.rankings;
+      this.rankingCache.set(target, rankings);
+    }
+
+    // Build a sorted list of [word, rank] excluding guessed words and the target
+    const candidates = Array.from(rankings.entries())
+      .filter(([word]) => word !== target && !guessedWords.has(word))
+      .sort((a, b) => a[1] - b[1]);
+
+    if (candidates.length === 0) return null;
+
+    let targetRank: number;
+    if (!bestRank || bestRank > 1000) {
+      targetRank = 500;
+    } else if (bestRank <= 2) {
+      targetRank = 1;
+    } else {
+      targetRank = Math.floor(bestRank / 2);
+    }
+
+    let best = candidates[0]!;
+    let bestDiff = Math.abs(best[1] - targetRank);
+    for (const candidate of candidates) {
+      const diff = Math.abs(candidate[1] - targetRank);
+      if (diff < bestDiff) {
+        best = candidate;
+        bestDiff = diff;
+      }
+    }
+
+    return { word: best[0], rank: best[1] };
+  }
+
+
+  /**
+   * Load proper noun blacklist from file
+   */
+  private async loadProperNounBlacklist(dataPath?: string): Promise<void> {
+    const filePath = dataPath || path.join(__dirname, '../../data/dictionaries/proper-nouns-blacklist.txt');
+    
+    try {
+      const data = await fs.readFile(filePath, 'utf-8');
+      const lines = data.split('\n');
+      
+      lines.forEach(line => {
+        const word = line.trim().toLowerCase();
+        // Skip empty lines and comments
+        if (word && !word.startsWith('#')) {
+          this.properNounBlacklist.add(word);
+        }
+      });
+      
+      this.logger.info(`Loaded ${this.properNounBlacklist.size} proper nouns to blacklist`);
+    } catch (error) {
+      this.logger.warn('No proper noun blacklist found, continuing without filtering:', error);
+    }
   }
 
   /**
@@ -181,8 +263,8 @@ export class SemanticEngine {
           const parts = line.split(' ');
           const word = parts[0];
           
-          // Only accept words that contain only letters (a-z, A-Z)
-          if (word && parts.length > 1 && /^[a-zA-Z]+$/.test(word)) {
+          // Only accept words that contain only letters (a-z, A-Z) and not in blacklist
+          if (word && parts.length > 1 && /^[a-zA-Z]+$/.test(word) && !this.properNounBlacklist.has(word.toLowerCase())) {
             const vector = parts.slice(1).map(Number);
             
             if (vector.length > 0 && !vector.some(isNaN)) {

@@ -84,17 +84,25 @@ export class EmbedBuilder {
     }
 
     if (guesses.length > 0) {
-      const recentGuesses = guesses.slice(-10); // Show last 10 guesses
-      const guessText = recentGuesses
-        .map(guess => {
-          const rank = guess.rank ? `#${guess.rank}` : 'Cold';
+      // Sort by similarity descending, but pull out the latest guess
+      const latestGuess = guesses[guesses.length - 1]!;
+      const previousGuesses = guesses.slice(0, -1);
+      const sorted = [...previousGuesses].sort((a, b) => b.similarity - a.similarity);
+      const topSorted = sorted.slice(0, 9); // Top 9 by similarity
+      // Append the latest guess at the bottom
+      const displayGuesses = [...topSorted, latestGuess];
+
+      const guessText = displayGuesses
+        .map((guess, i) => {
+          const rank = guess.rank === 0 ? '🎉 Answer' : guess.rank ? `#${guess.rank}` : 'Cold';
           const similarity = (guess.similarity * 100).toFixed(1);
-          return `**${guess.word}** - ${rank} (${similarity}%)`;
+          const label = (i === displayGuesses.length - 1 && !isComplete) ? '→ ' : '';
+          return `${label}**${guess.word}** - ${rank} (${similarity}%)`;
         })
         .join('\n');
 
       embed.addFields({
-        name: `Recent Guesses (${guesses.length} total)`,
+        name: `Top Guesses (${guesses.length} total)`,
         value: guessText || 'No guesses yet',
         inline: false
       });

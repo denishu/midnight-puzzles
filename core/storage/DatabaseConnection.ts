@@ -1,7 +1,7 @@
 import { Pool, PoolClient } from 'pg';
 import sqlite3 from 'sqlite3';
 import { promisify } from 'util';
-import { Logger } from '@core/utils/Logger';
+import { Logger } from '../utils/Logger';
 
 export interface DatabaseConfig {
   type: 'sqlite' | 'postgresql';
