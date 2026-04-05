@@ -1,26 +1,54 @@
 <svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <clipPath id="c2"><circle cx="128" cy="128" r="128"/></clipPath>
-    <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#059669"/><stop offset="100%" stop-color="#10b981"/>
-    </linearGradient>
-    <radialGradient id="sph" cx="0.38" cy="0.33" r="0.65">
-      <stop offset="0%" stop-color="#6ee7b7"/><stop offset="55%" stop-color="#34d399"/><stop offset="100%" stop-color="#065f46"/>
+    <radialGradient id="ocean" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="50%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1e3a5f"/>
     </radialGradient>
+    <linearGradient id="forest1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4ade80"/><stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+    <linearGradient id="forest2" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#86efac"/><stop offset="100%" stop-color="#34d399"/>
+    </linearGradient>
+    <linearGradient id="desert" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fde68a"/><stop offset="100%" stop-color="#fbbf24"/>
+    </linearGradient>
+    <linearGradient id="tundra" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6ee7b7"/><stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
   </defs>
   <g clip-path="url(#c2)">
-    <rect width="256" height="256" fill="url(#bg2)"/>
-    <circle cx="128" cy="128" r="82" fill="url(#sph)" opacity="0.35"/>
-    <g transform="translate(128,72) rotate(-10) scale(0.38)"><path d="M-30,-30 L-6,-30 C-6,-30 -6,-42 0,-42 C6,-42 6,-30 6,-30 L30,-30 L30,-6 C30,-6 42,-6 42,0 C42,6 30,6 30,6 L30,30 L6,30 C6,30 6,42 0,42 C-6,42 -6,30 -6,30 L-30,30 L-30,6 C-30,6 -42,6 -42,0 C-42,-6 -30,-6 -30,-6 Z" fill="#6ee7b7" stroke="#fff" stroke-width="3" stroke-opacity="0.5"/></g>
-    <g transform="translate(82,98) rotate(20) scale(0.36)"><path d="M-30,-30 L-6,-30 C-6,-30 -6,-42 0,-42 C6,-42 6,-30 6,-30 L30,-30 L30,-6 C30,-6 42,-6 42,0 C42,6 30,6 30,6 L30,30 L6,30 C6,30 6,42 0,42 C-6,42 -6,30 -6,30 L-30,30 L-30,6 C-30,6 -42,6 -42,0 C-42,-6 -30,-6 -30,-6 Z" fill="#34d399" stroke="#fff" stroke-width="3" stroke-opacity="0.5"/></g>
-    <g transform="translate(172,92) rotate(-25) scale(0.34)"><path d="M-30,-30 L-6,-30 C-6,-30 -6,-42 0,-42 C6,-42 6,-30 6,-30 L30,-30 L30,-6 C30,-6 42,-6 42,0 C42,6 30,6 30,6 L30,30 L6,30 C6,30 6,42 0,42 C-6,42 -6,30 -6,30 L-30,30 L-30,6 C-30,6 -42,6 -42,0 C-42,-6 -30,-6 -30,-6 Z" fill="#a7f3d0" stroke="#fff" stroke-width="3" stroke-opacity="0.45"/></g>
-    <g transform="translate(68,140) rotate(8) scale(0.35)"><path d="M-30,-30 L-6,-30 C-6,-30 -6,-42 0,-42 C6,-42 6,-30 6,-30 L30,-30 L30,-6 C30,-6 42,-6 42,0 C42,6 30,6 30,6 L30,30 L6,30 C6,30 6,42 0,42 C-6,42 -6,30 -6,30 L-30,30 L-30,6 C-30,6 -42,6 -42,0 C-42,-6 -30,-6 -30,-6 Z" fill="#6ee7b7" stroke="#fff" stroke-width="3" stroke-opacity="0.4"/></g>
-    <g transform="translate(128,132) rotate(-5) scale(0.4)"><path d="M-30,-30 L-6,-30 C-6,-30 -6,-42 0,-42 C6,-42 6,-30 6,-30 L30,-30 L30,-6 C30,-6 42,-6 42,0 C42,6 30,6 30,6 L30,30 L6,30 C6,30 6,42 0,42 C-6,42 -6,30 -6,30 L-30,30 L-30,6 C-30,6 -42,6 -42,0 C-42,-6 -30,-6 -30,-6 Z" fill="#34d399" stroke="#fff" stroke-width="3" stroke-opacity="0.5"/></g>
-    <g transform="translate(180,138) rotate(18) scale(0.33)"><path d="M-30,-30 L-6,-30 C-6,-30 -6,-42 0,-42 C6,-42 6,-30 6,-30 L30,-30 L30,-6 C30,-6 42,-6 42,0 C42,6 30,6 30,6 L30,30 L6,30 C6,30 6,42 0,42 C-6,42 -6,30 -6,30 L-30,30 L-30,6 C-30,6 -42,6 -42,0 C-42,-6 -30,-6 -30,-6 Z" fill="#a7f3d0" stroke="#fff" stroke-width="3" stroke-opacity="0.4"/></g>
-    <g transform="translate(92,174) rotate(-15) scale(0.34)"><path d="M-30,-30 L-6,-30 C-6,-30 -6,-42 0,-42 C6,-42 6,-30 6,-30 L30,-30 L30,-6 C30,-6 42,-6 42,0 C42,6 30,6 30,6 L30,30 L6,30 C6,30 6,42 0,42 C-6,42 -6,30 -6,30 L-30,30 L-30,6 C-30,6 -42,6 -42,0 C-42,-6 -30,-6 -30,-6 Z" fill="#34d399" stroke="#fff" stroke-width="3" stroke-opacity="0.45"/></g>
-    <g transform="translate(160,178) rotate(12) scale(0.32)"><path d="M-30,-30 L-6,-30 C-6,-30 -6,-42 0,-42 C6,-42 6,-30 6,-30 L30,-30 L30,-6 C30,-6 42,-6 42,0 C42,6 30,6 30,6 L30,30 L6,30 C6,30 6,42 0,42 C-6,42 -6,30 -6,30 L-30,30 L-30,6 C-30,6 -42,6 -42,0 C-42,-6 -30,-6 -30,-6 Z" fill="none" stroke="#fff" stroke-width="2.5" stroke-dasharray="5,4" opacity="0.35"/></g>
-    <ellipse cx="108" cy="100" rx="35" ry="25" fill="#fff" opacity="0.07" transform="rotate(-20,108,100)"/>
-    <circle cx="128" cy="128" r="82" fill="none" stroke="#fff" stroke-width="2" opacity="0.15"/>
+    <circle cx="128" cy="128" r="128" fill="url(#ocean)"/>
+    <g opacity="0.06">
+      <circle cx="60" cy="60" r="12" fill="#fff"/>
+      <circle cx="190" cy="45" r="8" fill="#fff"/>
+      <circle cx="40" cy="180" r="10" fill="#fff"/>
+      <circle cx="210" cy="190" r="7" fill="#fff"/>
+    </g>
+    <ellipse cx="100" cy="95" rx="50" ry="35" fill="#fff" opacity="0.08" transform="rotate(-15,100,95)"/>
+    <!-- Large forest continent (upper-left, like Eurasia) -->
+    <g transform="translate(88,80) rotate(-8) scale(0.72)">
+      <path d="M-30,-30 L-6,-30 C-6,-30 -6,-42 0,-42 C6,-42 6,-30 6,-30 L30,-30 L30,-6 C30,-6 42,-6 42,0 C42,6 30,6 30,6 L30,30 L6,30 C6,30 6,42 0,42 C-6,42 -6,30 -6,30 L-30,30 L-30,6 C-30,6 -42,6 -42,0 C-42,-6 -30,-6 -30,-6 Z"
+        fill="url(#forest1)" stroke="#fff" stroke-width="2" stroke-opacity="0.4"/>
+    </g>
+    <!-- Desert continent (center-right, like Africa/Middle East) -->
+    <g transform="translate(175,130) rotate(12) scale(0.65)">
+      <path d="M-30,-30 L-6,-30 C-6,-30 -6,-42 0,-42 C6,-42 6,-30 6,-30 L30,-30 L30,-6 C30,-6 42,-6 42,0 C42,6 30,6 30,6 L30,30 L6,30 C6,30 6,42 0,42 C-6,42 -6,30 -6,30 L-30,30 L-30,6 C-30,6 -42,6 -42,0 C-42,-6 -30,-6 -30,-6 Z"
+        fill="url(#desert)" stroke="#fff" stroke-width="2" stroke-opacity="0.35"/>
+    </g>
+    <!-- Green continent (lower-center, like South America) -->
+    <g transform="translate(105,165) rotate(-18) scale(0.52)">
+      <path d="M-30,-30 L-6,-30 C-6,-30 -6,-42 0,-42 C6,-42 6,-30 6,-30 L30,-30 L30,-6 C30,-6 42,-6 42,0 C42,6 30,6 30,6 L30,30 L6,30 C6,30 6,42 0,42 C-6,42 -6,30 -6,30 L-30,30 L-30,6 C-30,6 -42,6 -42,0 C-42,-6 -30,-6 -30,-6 Z"
+        fill="url(#forest2)" stroke="#fff" stroke-width="2" stroke-opacity="0.35"/>
+    </g>
+    <!-- Smaller tundra piece (upper-right, like northern Asia) -->
+    <g transform="translate(175,55) rotate(22) scale(0.38)">
+      <path d="M-30,-30 L-6,-30 C-6,-30 -6,-42 0,-42 C6,-42 6,-30 6,-30 L30,-30 L30,-6 C30,-6 42,-6 42,0 C42,6 30,6 30,6 L30,30 L6,30 C6,30 6,42 0,42 C-6,42 -6,30 -6,30 L-30,30 L-30,6 C-30,6 -42,6 -42,0 C-42,-6 -30,-6 -30,-6 Z"
+        fill="url(#tundra)" stroke="#fff" stroke-width="2" stroke-opacity="0.35"/>
+    </g>
+    <circle cx="128" cy="128" r="126" fill="none" stroke="#1e3a5f" stroke-width="4" opacity="0.3"/>
   </g>
   <circle cx="128" cy="128" r="125" fill="none" stroke="#fff" stroke-width="3" stroke-opacity="0.15"/>
 </svg>
