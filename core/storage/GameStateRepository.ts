@@ -276,6 +276,18 @@ export class GameStateRepository {
   }
 
   /**
+   * Delete a specific session by ID
+   */
+  async deleteSession(sessionId: string): Promise<void> {
+    try {
+      await this.db.query('DELETE FROM game_sessions WHERE id = $1', [sessionId]);
+    } catch (error) {
+      this.logger.error('Error deleting session:', { sessionId, error });
+      throw error;
+    }
+  }
+
+  /**
    * Delete old sessions (cleanup)
    */
   async deleteOldSessions(daysToKeep: number = 90): Promise<number> {

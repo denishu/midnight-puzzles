@@ -147,6 +147,17 @@ class TravleBot extends BaseBotApplication {
       if (!state.isComplete) embed.addFields({ name: 'Remaining', value: '' + state.guessesRemaining, inline: true });
       if (result.winningPath) embed.addFields({ name: 'Winning path', value: result.winningPath.join(' → '), inline: false });
       await interaction.editReply({ embeds: [embed] });
+
+      // Auto-post public results on win
+      if (result.isWin) {
+        const pz = state.puzzle;
+        const colors = state.guesses.map((g: { status: string }) => g.status === 'green' ? '🟩' : g.status === 'yellow' ? '🟨' : '🟥').join('');
+        const over = state.guesses.length - (pz.shortestPathLength - 1);
+        const score = over <= 0 ? 'Perfect!' : '+' + over;
+        const rEmbed = EmbedBuilder.createGameEmbed('travle', '🌍 Travle Results');
+        rEmbed.setDescription('**' + interaction.user.username + '** — ' + score + '\n' + pz.start.toUpperCase() + ' → ' + pz.end.toUpperCase() + ' (' + state.guesses.length + ' guesses)\n\n' + colors);
+        await interaction.followUp({ embeds: [rEmbed], ephemeral: false });
+      }
     } catch (error) {
       this.logger.error('Error in /guess:', error);
       await interaction.editReply({ embeds: [EmbedBuilder.createError('Error', 'Something went wrong.')] });
@@ -174,6 +185,10 @@ class TravleBot extends BaseBotApplication {
 
   private async handleReset(interaction: any): Promise<void> {
     this.cache.delete(interaction.user.id);
+    const dbSession = await this.sessionRepo.getActiveSession(interaction.user.id, 'travle', new Date());
+    if (dbSession) {
+      await this.sessionRepo.deleteSession(dbSession.id);
+    }
     await interaction.reply({ content: '🔄 Game reset. Use `/play` to start fresh.', ephemeral: true });
   }
 

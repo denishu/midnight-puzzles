@@ -32,6 +32,10 @@ const commands = [
   {
     name: 'hint',
     description: 'Get a hint for your current Semantle game'
+  },
+  {
+    name: 'reset',
+    description: 'Reset your current Semantle game (for testing)'
   }
 ];
 

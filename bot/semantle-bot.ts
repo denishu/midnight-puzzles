@@ -25,6 +25,7 @@ class SemantleBot extends BaseBotApplication {
   private semantleGame!: SemantleGame;
   private gameFactory!: GameSessionFactory;
   private userRepo!: UserRepository;
+  private sessionRepo!: GameStateRepository;
   // Maps userId -> sessionId for the current day
   private userSessions: Map<string, string> = new Map();
 
@@ -59,6 +60,7 @@ class SemantleBot extends BaseBotApplication {
     const sessionManager = new SessionManager(gameStateRepo);
     const semanticEngine = new SemanticEngine();
     this.userRepo = new UserRepository(db);
+    this.sessionRepo = gameStateRepo;
 
     this.semantleGame = new SemantleGame(semanticEngine, sessionManager, dailyPuzzleRepo);
     await this.semantleGame.initialize();
@@ -104,6 +106,12 @@ class SemantleBot extends BaseBotApplication {
       name: 'hint',
       description: 'Get a hint for your current Semantle game',
       handler: this.handleHintCommand.bind(this)
+    });
+
+    this.commandRegistry.register({
+      name: 'reset',
+      description: 'Reset your current Semantle game (for testing)',
+      handler: this.handleResetCommand.bind(this)
     });
   }
 
@@ -176,6 +184,15 @@ class SemantleBot extends BaseBotApplication {
         const embed = EmbedBuilder.createSemantle(gameState.session.gameData.targetWord, guesses, true);
         embed.setFooter({ text: result.feedback });
         await interaction.editReply({ embeds: [embed] });
+
+        // Auto-post public results
+        const session = gameState.session;
+        const resultsEmbed = EmbedBuilder.createGameEmbed('semantle', '🔤 Semantle Results');
+        resultsEmbed.setDescription(`**${interaction.user.username}** solved today's Semantle in **${session.attempts}** guesses!`);
+        if (session.gameData.bestRank) {
+          resultsEmbed.addFields({ name: 'Best Rank', value: `#${session.gameData.bestRank}`, inline: true });
+        }
+        await interaction.followUp({ embeds: [resultsEmbed], ephemeral: false });
       } else {
         // Ongoing — show feedback + recent guesses
         const gameState = await this.semantleGame.getGameState(sessionId);
@@ -227,6 +244,16 @@ class SemantleBot extends BaseBotApplication {
       const errEmbed = EmbedBuilder.createError('Results unavailable', 'Could not retrieve your results.');
       await interaction.editReply({ embeds: [errEmbed] });
     }
+  }
+
+  private async handleResetCommand(interaction: any): Promise<void> {
+    const userId = interaction.user.id;
+    this.userSessions.delete(userId);
+    const dbSession = await this.sessionRepo.getActiveSession(userId, 'semantle', new Date());
+    if (dbSession) {
+      await this.sessionRepo.deleteSession(dbSession.id);
+    }
+    await interaction.reply({ content: '🔄 Game reset. Use `/play` to start fresh.', ephemeral: true });
   }
 
   private async handleHintCommand(interaction: any): Promise<void> {
