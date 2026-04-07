@@ -12,5 +12,5 @@ function hash(str: string): number {
 }
 
 console.log('Total words:', words.length);
-console.log('Mar 26 (UTC):', words[hash('2026-03-26') % words.length]);
-console.log('Mar 27 (UTC):', words[hash('2026-03-27') % words.length]);
+console.log('Apr 7 (UTC):', words[hash('2026-04-07') % words.length]);
+console.log('Apr 8 (UTC):', words[hash('2026-04-08') % words.length]);

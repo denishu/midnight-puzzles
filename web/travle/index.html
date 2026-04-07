@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Travle</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  #header {
+    padding: 12px 20px;
+    background: #16213e;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #0f3460;
+  }
+  #header h1 { font-size: 20px; color: #4ade80; }
+  #puzzle-info { font-size: 14px; opacity: 0.8; }
+  #puzzle-info span { font-weight: 700; color: #60a5fa; }
+  #map { flex: 1; background: #0c1929; }
+  .country-tooltip {
+    background: #16213e;
+    color: #e0e0e0;
+    border: 1px solid #0f3460;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 13px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+  .country-tooltip::before { border-top-color: #0f3460; }
+  #bottom-bar {
+    padding: 12px 20px;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+  #input-wrapper {
+    flex: 1;
+    position: relative;
+  }
+  #guess-input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #0f3460;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    font-size: 15px;
+    outline: none;
+  }
+  #guess-input:focus { border-color: #4ade80; }
+  #suggestions {
+    position: absolute;
+    bottom: 100%;
+    left: 0; right: 0;
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 8px 8px 0 0;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+  }
+  #suggestions.active { display: block; }
+  .suggestion {
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    text-transform: capitalize;
+  }
+  .suggestion:hover, .suggestion.selected { background: #0f3460; color: #4ade80; }
+  #submit-btn {
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: none;
+    background: #4ade80;
+    color: #1a1a2e;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  #submit-btn:hover { background: #22c55e; }
+  #submit-btn:disabled { opacity: 0.4; cursor: default; }
+  #guesses-bar {
+    padding: 8px 20px;
+    background: #16213e;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 13px;
+  }
+  .guess-chip {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    text-transform: capitalize;
+  }
+  .guess-chip.green { background: #166534; color: #4ade80; }
+  .guess-chip.yellow { background: #713f12; color: #fbbf24; }
+  .guess-chip.red { background: #7f1d1d; color: #fca5a5; }
+  .guess-chip.neutral { background: #1e3a5f; color: #60a5fa; }
+  #status-bar {
+    padding: 6px 20px;
+    background: #0f3460;
+    text-align: center;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+<div id="header">
+  <h1>🌍 Travle</h1>
+  <div id="puzzle-info">
+    <span id="start-country">—</span> → <span id="end-country">—</span>
+    &nbsp;|&nbsp; <span id="guesses-left">—</span> guesses left
+  </div>
+</div>
+<div id="status-bar" id="status">Loading map...</div>
+<div id="guesses-bar"></div>
+<div id="map"></div>
+<div id="bottom-bar">
+  <div id="input-wrapper">
+    <input id="guess-input" type="text" placeholder="Type a country name..." autocomplete="off" />
+    <div id="suggestions"></div>
+  </div>
+  <button id="submit-btn" disabled>Guess</button>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -232,7 +232,7 @@ export class SemantleGame implements Game {
       isValid: true,
       feedback,
       isComplete: false,
-      nextPrompt: `Guess ${session.attempts + 2}/${this.maxAttempts}`,
+      nextPrompt: `Guess #${session.attempts}`,
       data: { rank, similarity, bestRank: session.gameData.bestRank }
     };
   }

@@ -71,7 +71,7 @@ export class PuzzleGenerator {
 
   generateFromSeed(seed: number): TravlePuzzle {
     const MIN_PATH = 3;
-    const MAX_PATH = 7;
+    const MAX_PATH = 11;
 
     let attempt = 0;
     while (attempt < 500) {
@@ -113,7 +113,12 @@ export class PuzzleGenerator {
   }
 
   private seededIndex(seed: number, length: number): number {
-    return Math.abs(seed * 2654435761 >>> 0) % length; // Knuth multiplicative hash
+    // Mix the bits more aggressively so consecutive seeds spread apart
+    let h = seed;
+    h = ((h >>> 16) ^ h) * 0x45d9f3b;
+    h = ((h >>> 16) ^ h) * 0x45d9f3b;
+    h = (h >>> 16) ^ h;
+    return (h >>> 0) % length;
   }
 
   private hashString(str: string): number {
@@ -121,6 +126,9 @@ export class PuzzleGenerator {
     for (let i = 0; i < str.length; i++) {
       hash = ((hash << 5) + hash + str.charCodeAt(i)) & 0x7fffffff;
     }
-    return hash;
+    // Extra mixing
+    hash = ((hash >>> 16) ^ hash) * 0x45d9f3b;
+    hash = ((hash >>> 16) ^ hash) * 0x45d9f3b;
+    return ((hash >>> 16) ^ hash) >>> 0;
   }
 }
