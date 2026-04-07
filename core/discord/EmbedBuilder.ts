@@ -94,8 +94,8 @@ export class EmbedBuilder {
 
       const guessText = displayGuesses
         .map((guess, i) => {
-          const rank = guess.rank === 0 ? '🎉 Answer' : guess.rank ? `#${guess.rank}` : (guess.similarity < 0.1 ? '❄️' : guess.similarity < 0.2 ? '🌡️' : '🌡️');
-          const similarity = (guess.similarity * 100).toFixed(1);
+          const rank = guess.rank === 0 ? '🎉 Answer' : guess.rank ? `#${guess.rank}` : (guess.similarity < 0.2 ? '❄️ Cold' : '🌊 Tepid');
+          const similarity = (guess.similarity * 100).toFixed(2);
           const label = (i === displayGuesses.length - 1 && !isComplete) ? '→ ' : '';
           return `${label}**${guess.word}** - ${rank} (${similarity}%)`;
         })

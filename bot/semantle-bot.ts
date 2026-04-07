@@ -144,6 +144,11 @@ class SemantleBot extends BaseBotApplication {
         embed.setFooter({ text: `Resuming your session — ${guesses.length} guesses so far. Use /guess <word> to continue.` });
       } else {
         embed.setFooter({ text: 'Use /guess <word> to start guessing!' });
+        // Show 1000th word similarity threshold
+        const threshold = this.semantleGame.get1000thSimilarity(session.gameData.targetWord);
+        if (threshold !== null) {
+          embed.addFields({ name: 'Hint', value: `The 1000th most similar word has ${(threshold * 100).toFixed(2)}% similarity`, inline: false });
+        }
       }
 
       await interaction.editReply({ embeds: [embed] });

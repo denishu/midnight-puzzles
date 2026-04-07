@@ -218,13 +218,11 @@ export class SemantleGame implements Game {
         feedback += '\n👍 Getting warmer!';
       }
     } else {
-      // Word is not in top 1000 - show cold/tepid (Requirement 2.3)
-      if (similarity < 0.1) {
-        feedback = `❄️ Cold (not in top 1000)`;
-      } else if (similarity < 0.2) {
-        feedback = `🌡️ Tepid (not in top 1000)`;
+      // Word is not in top 1000
+      if (similarity < 0.2) {
+        feedback = `❄️ Cold (${(similarity * 100).toFixed(2)}%)`;
       } else {
-        feedback = `🌡️ Warm but not ranked (similarity: ${(similarity * 100).toFixed(1)}%)`;
+        feedback = `🌊 Tepid (${(similarity * 100).toFixed(2)}%)`;
       }
     }
 
@@ -261,6 +259,26 @@ export class SemantleGame implements Game {
         isComplete: session.isComplete
       }
     };
+  }
+
+  /**
+   * Get the similarity score of the 1000th most similar word to the target.
+   */
+  get1000thSimilarity(targetWord: string): number | null {
+    const data = this.semanticEngine.getSemanticData(targetWord);
+    // Find the word ranked 1000
+    for (const [word, rank] of data.rankings.entries()) {
+      if (rank === 1000) {
+        return data.similarities.get(word) ?? null;
+      }
+    }
+    // If less than 1000 ranked words, get the last one
+    let maxRank = 0;
+    let lastSim = 0;
+    for (const [word, rank] of data.rankings.entries()) {
+      if (rank > maxRank) { maxRank = rank; lastSim = data.similarities.get(word) ?? 0; }
+    }
+    return lastSim || null;
   }
 
   /**
