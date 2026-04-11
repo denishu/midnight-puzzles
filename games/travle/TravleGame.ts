@@ -35,7 +35,7 @@ export class TravleGame {
     return { puzzle: p, guesses: [], guessesRemaining: p.maxGuesses, isComplete: false, isWin: false, currentChain: null };
   }
   guess(state: TravleGameState, input: string): TravleGuessResult {
-    const country = input.trim().toLowerCase();
+    const country = this.graph.resolveAlias(input.trim().toLowerCase());
     const pz = state.puzzle;
     const bad = (fb: string, over = false): TravleGuessResult =>
       ({ isValid: false, feedback: fb, isGameOver: over, isWin: state.isWin, status: 'invalid' });

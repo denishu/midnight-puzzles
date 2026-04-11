@@ -8,7 +8,40 @@ import { Logger } from '../../core/utils/Logger';
  */
 export class CountryGraph {
   private adjacency: Map<string, string[]> = new Map();
+  private aliases: Map<string, string> = new Map(); // alias -> canonical name
   private logger: Logger;
+
+  // Common aliases/abbreviations
+  static readonly ALIAS_MAP: Record<string, string[]> = {
+    'united states': ['usa', 'us', 'america', 'united states of america'],
+    'united kingdom': ['uk', 'britain', 'great britain'],
+    'china': ["people's republic of china"],
+    'democratic republic of the congo': ['drc', 'dr congo', 'congo-kinshasa'],
+    'congo': ['republic of the congo', 'congo-brazzaville'],
+    'central african republic': ['car'],
+    'ivory coast': ["cote d'ivoire", 'côte d\'ivoire'],
+    'south korea': ['korea', 'republic of korea'],
+    'north korea': ['dprk'],
+    'czech republic': ['czechia'],
+    'eswatini': ['swaziland'],
+    'myanmar': ['burma'],
+    'east timor': ['timor-leste', 'timor leste'],
+    'north macedonia': ['macedonia'],
+    'bosnia and herzegovina': ['bosnia'],
+    'united arab emirates': ['uae'],
+    'saudi arabia': ['saudi', 'ksa'],
+    'vatican city': ['vatican', 'holy see'],
+    'papua new guinea': ['png'],
+    'south africa': ['rsa'],
+    'new zealand': ['nz'],
+    'trinidad and tobago': ['trinidad'],
+    'antigua and barbuda': ['antigua'],
+    'saint kitts and nevis': ['st kitts'],
+    'saint lucia': ['st lucia'],
+    'saint vincent and the grenadines': ['st vincent'],
+    'sao tome and principe': ['sao tome'],
+    'guinea-bissau': ['guinea bissau'],
+  };
 
   constructor() {
     this.logger = new Logger('CountryGraph');
@@ -24,22 +57,39 @@ export class CountryGraph {
     }
 
     this.logger.info(`Loaded ${this.adjacency.size} countries`);
+
+    // Build alias map
+    for (const [canonical, aliasList] of Object.entries(CountryGraph.ALIAS_MAP)) {
+      for (const alias of aliasList) {
+        this.aliases.set(alias.toLowerCase(), canonical.toLowerCase());
+      }
+    }
   }
 
-  /** Check if a country exists in the graph */
+  /** Resolve an alias to the canonical country name */
+  resolveAlias(name: string): string {
+    const lower = name.toLowerCase();
+    return this.aliases.get(lower) || lower;
+  }
+
+  /** Check if a country exists in the graph (supports aliases) */
   isValidCountry(name: string): boolean {
-    return this.adjacency.has(name.toLowerCase());
+    const resolved = this.resolveAlias(name);
+    return this.adjacency.has(resolved);
   }
 
-  /** Get neighbors of a country */
+  /** Get neighbors of a country (supports aliases) */
   getNeighbors(name: string): string[] {
-    return this.adjacency.get(name.toLowerCase()) || [];
+    const resolved = this.resolveAlias(name);
+    return this.adjacency.get(resolved) || [];
   }
 
-  /** Check if two countries share a border */
+  /** Check if two countries share a border (supports aliases) */
   areNeighbors(a: string, b: string): boolean {
-    const neighbors = this.adjacency.get(a.toLowerCase());
-    return neighbors ? neighbors.includes(b.toLowerCase()) : false;
+    const resolvedA = this.resolveAlias(a);
+    const resolvedB = this.resolveAlias(b);
+    const neighbors = this.adjacency.get(resolvedA);
+    return neighbors ? neighbors.includes(resolvedB) : false;
   }
 
   /** Get all country names */
