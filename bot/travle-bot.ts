@@ -77,6 +77,10 @@ export class TravleBot extends BaseBotApplication {
       // Generate today's puzzle
       const puzzle = this.travleGame.genPuzzle(today);
 
+      // Clean up old DB sessions and in-memory cache before posting
+      await this.sessionRepo.deleteOldSessions(7);
+      this.cache.clear();
+
       // Post to all guilds the bot is in
       for (const guild of this.client.guilds.cache.values()) {
         // Find the designated channel
@@ -142,11 +146,6 @@ export class TravleBot extends BaseBotApplication {
         );
         await (channel as any).send({ embeds: [newEmbed] });
       }
-
-      // Clean up old DB sessions (keep 7 days for safety)
-      await this.sessionRepo.deleteOldSessions(7);
-      // Clear in-memory cache for the new day
-      this.cache.clear();
 
       this.logger.info('Daily puzzle message posted with recap');
     } catch (e) {
