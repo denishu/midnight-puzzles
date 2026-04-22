@@ -83,14 +83,25 @@ export abstract class BaseBotApplication {
 
   public async deployCommands(): Promise<void> {
     try {
+      // Ensure commands are registered before deploying
+      this.registerCommands();
+
       const rest = new REST({ version: '10' }).setToken(this.config.token);
       const commands = this.commandRegistry.getCommandsForDeployment();
 
-      this.logger.info(`Deploying ${commands.length} commands for ${this.config.botName}...`);
+      // Fetch existing commands to preserve entry point commands (Activities)
+      const existing = await rest.get(
+        Routes.applicationCommands(this.config.clientId)
+      ) as any[];
+      const entryPoints = existing.filter((cmd: any) => cmd.type === 4); // type 4 = PRIMARY_ENTRY_POINT
+
+      const allCommands = [...commands, ...entryPoints];
+
+      this.logger.info(`Deploying ${commands.length} commands for ${this.config.botName} (+ ${entryPoints.length} entry points)...`);
 
       await rest.put(
         Routes.applicationCommands(this.config.clientId),
-        { body: commands }
+        { body: allCommands }
       );
 
       this.logger.info(`Successfully deployed commands for ${this.config.botName}`);

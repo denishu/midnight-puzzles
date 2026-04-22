@@ -69,6 +69,36 @@ class SemantleBot extends BaseBotApplication {
     this.gameFactory.registerGame(this.semantleGame);
 
     await super.start();
+    this.scheduleDailyMessage();
+  }
+
+  private scheduleDailyMessage(): void {
+    // @ts-ignore
+    import('node-cron').then((cron: any) => {
+      cron.default.schedule('0 0 * * *', () => {
+        this.postDailyPuzzleMessage();
+      }, { timezone: 'UTC' });
+      this.logger.info('Daily puzzle message scheduled for midnight UTC');
+    });
+  }
+
+  private async postDailyPuzzleMessage(): Promise<void> {
+    try {
+      const embed = EmbedBuilder.createGameEmbed('semantle', '🔤 New Semantle Puzzle!');
+      embed.setDescription('A new word is waiting to be discovered!\n\nUse `/play` to start guessing.');
+
+      for (const guild of this.client.guilds.cache.values()) {
+        const channel = guild.systemChannel || guild.channels.cache.find(
+          (ch: any) => ch.isTextBased() && ch.permissionsFor(guild.members.me!)?.has('SendMessages')
+        );
+        if (channel && 'send' in channel) {
+          await (channel as any).send({ embeds: [embed] });
+        }
+      }
+      this.logger.info('Daily Semantle puzzle message posted');
+    } catch (e) {
+      this.logger.error('Failed to post daily message:', e);
+    }
   }
 
   protected registerCommands(): void {

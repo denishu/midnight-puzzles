@@ -17,7 +17,7 @@
     "test-semantle": "echo 'Use npm run dev:semantle instead'",
     "setup-semantic-data": "powershell -ExecutionPolicy Bypass -File scripts/setup-semantic-data.ps1",
     "deploy:semantle": "ts-node -e \"import('./bot/semantle-bot').then(m => new m.default().deployCommands())\"",
-    "deploy:travle": "ts-node -e \"import('./bot/travle-bot').then(m => new m.default().deployCommands())\"",
+    "deploy:travle": "ts-node -e \"const { TravleBot } = require('./bot/travle-bot'); new TravleBot().deployCommands()\"",
     "deploy:duotrigordle": "ts-node -e \"import('./bot/duotrigordle-bot').then(m => new m.default().deployCommands())\"",
     "test": "jest",
     "test:watch": "jest --watch",

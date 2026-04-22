@@ -1,4 +1,6 @@
-// Travle Frontend — talks to /api endpoints
+// Travle Frontend — talks to /game endpoints
+
+import { initDiscord, getDiscordUser, getDiscordChannelId, getDiscordGuildId } from './dist/discord-sdk.js';
 
 const GEOJSON_URL = '/game/geojson';
 
@@ -13,9 +15,10 @@ let selectedSuggestion = -1;
 
 let aliasMap = {}; // canonical -> [aliases]
 
-// Extract Discord channel ID from iframe URL params
-const urlParams = new URLSearchParams(window.location.search);
-const discordChannelId = urlParams.get('channel_id');
+// Will be set after Discord SDK auth, or fallback to localStorage
+let sessionUserId = null;
+let discordChannelId = null;
+let discordGuildId = null;
 
 function titleCase(str) {
   const minorWords = new Set(['of', 'the', 'and', 'in', 'on', 'at', 'to', 'for', 'a', 'an']);
@@ -110,7 +113,16 @@ function zoomToCountries(names) {
 }
 
 function getSessionParam() {
-  const id = window.TRAVLE_SESSION_ID || 'default';
+  // Use Discord user ID if authenticated, otherwise fall back to localStorage
+  if (sessionUserId) {
+    return '?id=' + encodeURIComponent(sessionUserId);
+  }
+  // Fallback for local dev / non-Discord usage
+  let id = localStorage.getItem('travle_session_id');
+  if (!id) {
+    id = 'local_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem('travle_session_id', id);
+  }
   return '?id=' + encodeURIComponent(id);
 }
 
@@ -222,7 +234,7 @@ function showGameOver(isWin, feedback, winningPath) {
     document.getElementById('go-msg').textContent =
       'You got from ' + titleCase(puzzle.start) + ' to ' + titleCase(puzzle.end) + ' in ' + guesses.length + ' guesses';
   } else {
-    document.getElementById('go-msg').textContent = '';
+    document.getElementById('go-msg').textContent = 'The path was: ' + (puzzle.shortestPath || []).map(c => titleCase(c)).join(' → ');
   }
 
   // Show shortest solution
@@ -231,9 +243,12 @@ function showGameOver(isWin, feedback, winningPath) {
   document.getElementById('go-path').innerHTML =
     'Shortest solution (' + shortestCount + ' guesses): <br>' + shortestPath;
 
-  // Show shareable result
+  // Build shareable result (same format as /results slash command)
   const colors = guesses.map(g => g.status === 'green' ? '🟩' : g.status === 'yellow' ? '🟨' : '🟥').join('');
-  const shareText = '🧭 Travle — ' + titleCase(puzzle.start) + ' → ' + titleCase(puzzle.end) + ' (' + guesses.length + ' guesses)\n' + colors;
+  const over = guesses.length - (puzzle.shortestPathLength - 1);
+  const score = isWin ? (over <= 0 ? '✨ Perfect' : '+' + over) : '❌ DNF';
+  const shareText = '🧭 Travle — ' + score + '\n' + titleCase(puzzle.start) + ' → ' + titleCase(puzzle.end) + ' (' + guesses.length + ' guesses)\n' + colors;
+
   const shareEl = document.getElementById('go-share');
   if (shareEl) {
     shareEl.textContent = shareText;
@@ -241,6 +256,19 @@ function showGameOver(isWin, feedback, winningPath) {
   }
 
   overlay.classList.add('active');
+
+  // Auto-post results to Discord channel
+  console.log('Game over — discordChannelId:', discordChannelId, 'guildId:', discordGuildId);
+  if (discordChannelId || discordGuildId) {
+    fetch('/game/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channelId: discordChannelId, serverId: discordGuildId, message: shareText }),
+    }).then(r => {
+      console.log('Post results response:', r.status);
+      if (!r.ok) r.text().then(t => console.error('Post results error:', t));
+    }).catch(e => console.error('Failed to post results to Discord:', e));
+  }
 
   // Reveal all countries as outlines
   const guessedNames = new Set(guesses.map(g => resolveCountryName(g.country)));
@@ -328,6 +356,7 @@ window.closeOverlay = closeOverlay;
 function toggleInfo() {
   document.getElementById('info-popup').classList.toggle('active');
 }
+window.toggleInfo = toggleInfo;
 
 document.getElementById('guess-input').addEventListener('input', (e) => showSuggestions(e.target.value));
 document.getElementById('guess-input').addEventListener('keydown', (e) => {
@@ -339,6 +368,23 @@ document.getElementById('guess-input').addEventListener('keydown', (e) => {
 document.getElementById('submit-btn').addEventListener('click', submitGuess);
 document.getElementById('go-close').addEventListener('click', closeOverlay);
 document.getElementById('info-btn').addEventListener('click', toggleInfo);
+document.getElementById('info-close').addEventListener('click', toggleInfo);
 
 // --- Init ---
-initMap();
+async function boot() {
+  // Authenticate with Discord SDK first (if inside an Activity)
+  const discord = await initDiscord();
+  if (discord) {
+    sessionUserId = discord.user.id;
+    discordChannelId = discord.channelId;
+    discordGuildId = discord.guildId;
+    console.log('Session keyed to Discord user:', sessionUserId);
+  } else {
+    console.log('Running outside Discord, using localStorage session');
+  }
+
+  // Then load the map and game
+  await initMap();
+}
+
+boot();

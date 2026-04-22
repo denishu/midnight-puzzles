@@ -96,13 +96,17 @@ export class MigrationManager {
   }
 
   private getAvailableMigrations(): Migration[] {
-    // In a real implementation, this would scan a migrations directory
-    // For now, we'll return the initial schema migration
     return [
       {
         version: 1,
         name: 'initial_schema',
         up: this.getInitialSchema()
+      },
+      {
+        version: 2,
+        name: 'add_channel_id_to_server_configs',
+        up: 'ALTER TABLE server_configs ADD COLUMN channel_id TEXT;',
+        down: 'ALTER TABLE server_configs DROP COLUMN channel_id;'
       }
     ];
   }

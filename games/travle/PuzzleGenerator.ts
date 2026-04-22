@@ -61,7 +61,7 @@ export class PuzzleGenerator {
   /**
    * Generate a puzzle for a given date.
    * Uses date as seed for deterministic selection.
-   * Picks pairs with shortest path between 3-7 steps.
+   * Picks pairs with shortest path between 3-11 steps.
    */
   generateForDate(date: Date): TravlePuzzle {
     const dateStr = date.toISOString().split('T')[0]!;

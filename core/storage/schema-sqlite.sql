@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS game_sessions (
 -- Server configurations table
 CREATE TABLE IF NOT EXISTS server_configs (
     server_id TEXT PRIMARY KEY,
+    channel_id TEXT,
     enabled_games TEXT DEFAULT '["semantle", "travle", "duotrigordle"]',
     custom_settings TEXT DEFAULT '{}',
     custom_word_lists TEXT DEFAULT '{}',

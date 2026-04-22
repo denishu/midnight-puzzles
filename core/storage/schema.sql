@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS game_sessions (
 -- Server configurations table
 CREATE TABLE IF NOT EXISTS server_configs (
     server_id VARCHAR(20) PRIMARY KEY,
+    channel_id VARCHAR(20),
     enabled_games JSONB DEFAULT '["semantle", "travle", "duotrigordle"]',
     custom_settings JSONB DEFAULT '{}',
     custom_word_lists JSONB DEFAULT '{}',

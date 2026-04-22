@@ -3,6 +3,7 @@ import { Logger } from '../utils/Logger';
 
 export interface ServerConfig {
   serverId: string;
+  channelId: string | null;
   enabledGames: string[];
   customSettings: Record<string, any>;
   customWordLists: Record<string, string[]>;
@@ -150,11 +151,64 @@ export class ConfigRepository {
   }
 
   /**
+   * Set the designated channel for bot messages
+   */
+  async setChannelId(serverId: string, channelId: string): Promise<void> {
+    try {
+      // Upsert: create config if it doesn't exist, otherwise just update channel_id
+      const existing = await this.getServerConfig(serverId);
+      if (!existing) {
+        const sql = `
+          INSERT INTO server_configs (server_id, channel_id)
+          VALUES ($1, $2)
+        `;
+        await this.db.query(sql, [serverId, channelId]);
+      } else {
+        const sql = `
+          UPDATE server_configs 
+          SET channel_id = $1, updated_at = CURRENT_TIMESTAMP
+          WHERE server_id = $2
+        `;
+        await this.db.query(sql, [channelId, serverId]);
+      }
+    } catch (error) {
+      this.logger.error('Error setting channel ID:', { serverId, channelId, error });
+      throw error;
+    }
+  }
+
+  /**
+   * Get the streak info for a game type from custom_settings
+   */
+  async getStreak(serverId: string, gameType: string): Promise<{ count: number; lastDate: string }> {
+    const config = await this.getServerConfig(serverId);
+    const streaks = config?.customSettings?.streaks || {};
+    return streaks[gameType] || { count: 0, lastDate: '' };
+  }
+
+  /**
+   * Update the streak for a game type in custom_settings
+   */
+  async updateStreak(serverId: string, gameType: string, count: number, date: string): Promise<void> {
+    try {
+      const config = await this.getServerConfig(serverId);
+      const settings = config?.customSettings || {};
+      if (!settings.streaks) settings.streaks = {};
+      settings.streaks[gameType] = { count, lastDate: date };
+      await this.updateCustomSettings(serverId, settings);
+    } catch (error) {
+      this.logger.error('Error updating streak:', { serverId, gameType, count, error });
+      throw error;
+    }
+  }
+
+  /**
    * Map database row to ServerConfig object
    */
   private mapRowToConfig(row: any): ServerConfig {
     return {
       serverId: row.server_id,
+      channelId: row.channel_id || null,
       enabledGames: typeof row.enabled_games === 'string' ? JSON.parse(row.enabled_games) : row.enabled_games,
       customSettings: typeof row.custom_settings === 'string' ? JSON.parse(row.custom_settings) : row.custom_settings,
       customWordLists: typeof row.custom_word_lists === 'string' ? JSON.parse(row.custom_word_lists) : row.custom_word_lists,

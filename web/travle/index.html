@@ -176,6 +176,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #0a0e1a; color: 
   <button id="go-close">Close</button>
 </div>
 <div id="info-popup">
+  <span id="info-close" style="position:absolute; top:10px; right:14px; cursor:pointer; font-size:18px; color:#64748b; transition:color 0.2s;">✕</span>
   <h3>How to Play</h3>
   Connect the two highlighted countries by guessing a chain of bordering countries between them.
   <br><br>
@@ -186,6 +187,6 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #0a0e1a; color: 
   Find a complete chain before you run out of guesses!
 </div>
 <script src="leaflet.js"></script>
-<script src="app-game.js"></script>
+<script type="module" src="app-game.js?v=4"></script>
 </body>
 </html>

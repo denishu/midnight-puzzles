@@ -310,6 +310,28 @@ export class GameStateRepository {
   }
 
   /**
+   * Get all completed sessions for a game type and date, joined with username.
+   * Used for daily recap messages.
+   */
+  async getCompletedSessionsForDate(gameType: string, puzzleDate: Date): Promise<Array<GameSession & { username: string }>> {
+    try {
+      const dateStr = puzzleDate.toISOString().split('T')[0];
+      const sql = `
+        SELECT gs.*, u.username
+        FROM game_sessions gs
+        JOIN users u ON gs.user_id = u.discord_id
+        WHERE gs.game_type = $1 AND gs.puzzle_date = $2 AND gs.is_complete = TRUE
+        ORDER BY gs.server_id, gs.end_time ASC
+      `;
+      const rows = await this.db.query<any>(sql, [gameType, dateStr]);
+      return rows.map(row => ({ ...this.mapRowToSession(row), username: row.username }));
+    } catch (error) {
+      this.logger.error('Error getting completed sessions for date:', { gameType, puzzleDate, error });
+      throw error;
+    }
+  }
+
+  /**
    * Map database row to GameSession object
    */
   private mapRowToSession(row: any): GameSession {

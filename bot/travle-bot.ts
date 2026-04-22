@@ -8,15 +8,19 @@ import { EmbedBuilder } from '../core/discord/EmbedBuilder';
 import { DatabaseConnectionFactory, DatabaseConnection } from '../core/storage/DatabaseConnection';
 import { UserRepository } from '../core/storage/UserRepository';
 import { GameStateRepository } from '../core/storage/GameStateRepository';
+import { ConfigRepository } from '../core/storage/ConfigRepository';
 import { MigrationManager } from '../core/storage/migrations/migrate';
+// @ts-ignore
+import cron from 'node-cron';
 
 config();
 
-class TravleBot extends BaseBotApplication {
+export class TravleBot extends BaseBotApplication {
   private travleGame!: TravleGame;
   private graph!: CountryGraph;
   private userRepo!: UserRepository;
   private sessionRepo!: GameStateRepository;
+  private configRepo!: ConfigRepository;
   // In-memory cache: userId -> TravleGameState
   private cache: Map<string, TravleGameState> = new Map();
 
@@ -36,11 +40,118 @@ class TravleBot extends BaseBotApplication {
     await new MigrationManager(db).migrate();
     this.userRepo = new UserRepository(db);
     this.sessionRepo = new GameStateRepository(db);
+    this.configRepo = new ConfigRepository(db);
     this.graph = new CountryGraph();
     await this.graph.initialize();
     this.travleGame = new TravleGame(this.graph);
     this.travleGame.init();
     await super.start();
+    this.scheduleDailyMessage();
+  }
+
+  private scheduleDailyMessage(): void {
+    // Run at midnight UTC every day
+    cron.schedule('0 0 * * *', () => {
+      this.postDailyPuzzleMessage();
+    }, { timezone: 'UTC' });
+    this.logger.info('Daily puzzle message scheduled for midnight UTC');
+  }
+
+  private async postDailyPuzzleMessage(): Promise<void> {
+    try {
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+
+      // Get yesterday's completed games for the recap
+      const completedSessions = await this.sessionRepo.getCompletedSessionsForDate('travle', yesterday);
+
+      // Group by server
+      const byServer = new Map<string, Array<typeof completedSessions[0]>>();
+      for (const session of completedSessions) {
+        const list = byServer.get(session.serverId) || [];
+        list.push(session);
+        byServer.set(session.serverId, list);
+      }
+
+      // Generate today's puzzle
+      const puzzle = this.travleGame.genPuzzle(today);
+
+      // Post to all guilds the bot is in
+      for (const guild of this.client.guilds.cache.values()) {
+        // Find the designated channel
+        const serverConfig = await this.configRepo.getServerConfig(guild.id);
+        let channel: any = null;
+
+        if (serverConfig?.channelId) {
+          channel = guild.channels.cache.get(serverConfig.channelId);
+        }
+        if (!channel) {
+          channel = guild.systemChannel || guild.channels.cache.find(
+            (ch: any) => ch.isTextBased() && ch.permissionsFor(guild.members.me!)?.has('SendMessages')
+          );
+        }
+        if (!channel || !('send' in channel)) continue;
+
+        // --- Yesterday's recap ---
+        const serverSessions = byServer.get(guild.id) || [];
+        if (serverSessions.length > 0) {
+          // Update streak
+          const streak = await this.configRepo.getStreak(guild.id, 'travle');
+          const yesterdayStr = yesterday.toISOString().split('T')[0]!;
+          const dayBeforeStr = new Date(yesterday.getTime() - 86400000).toISOString().split('T')[0]!;
+
+          const anyWin = serverSessions.some(s => s.result?.isWin);
+          let newCount: number;
+          if (anyWin) {
+            // Continue streak if last streak date was the day before yesterday
+            newCount = (streak.lastDate === dayBeforeStr) ? streak.count + 1 : 1;
+          } else {
+            newCount = 0;
+          }
+          await this.configRepo.updateStreak(guild.id, 'travle', newCount, yesterdayStr);
+
+          // Build recap embed
+          const recapEmbed = EmbedBuilder.createGameEmbed('travle', '🧭 Yesterday\'s Travle Recap');
+          const lines = serverSessions.map(s => {
+            const guessCount = s.result?.guessCount || s.gameData?.guesses?.length || '?';
+            const shortest = s.result?.shortestPath || '?';
+            const won = s.result?.isWin;
+            const over = won ? (guessCount as number) - ((shortest as number) - 1) : null;
+            const score = won ? (over! <= 0 ? '✨ Perfect' : `+${over}`) : '❌ DNF';
+            const colors = (s.gameData?.guesses || []).map((g: any) =>
+              g.status === 'green' ? '🟩' : g.status === 'yellow' ? '🟨' : '🟥'
+            ).join('');
+            return `**${s.username}** — ${score} (${guessCount} guesses)\n${colors}`;
+          });
+
+          recapEmbed.setDescription(lines.join('\n\n'));
+          if (newCount > 0) {
+            recapEmbed.setFooter({ text: `🔥 Server streak: ${newCount} day${newCount > 1 ? 's' : ''}` });
+          }
+
+          await (channel as any).send({ embeds: [recapEmbed] });
+        }
+
+        // --- Today's new puzzle ---
+        const newEmbed = EmbedBuilder.createGameEmbed('travle', '🧭 New Travle Puzzle!');
+        newEmbed.setDescription(
+          'Connect **' + puzzle.start.toUpperCase() + '** to **' + puzzle.end.toUpperCase() + '**\n\n' +
+          'Find a path through ' + (puzzle.shortestPathLength - 1) + ' countries. You have ' + puzzle.maxGuesses + ' guesses.\n\n' +
+          'Use `/play` or launch the Activity to start!'
+        );
+        await (channel as any).send({ embeds: [newEmbed] });
+      }
+
+      // Clean up old DB sessions (keep 7 days for safety)
+      await this.sessionRepo.deleteOldSessions(7);
+      // Clear in-memory cache for the new day
+      this.cache.clear();
+
+      this.logger.info('Daily puzzle message posted with recap');
+    } catch (e) {
+      this.logger.error('Failed to post daily message:', e);
+    }
   }
 
   protected registerCommands(): void {
@@ -49,6 +160,7 @@ class TravleBot extends BaseBotApplication {
     this.commandRegistry.register({ name: 'results', description: 'Share your Travle results', handler: this.handleResults.bind(this) });
     this.commandRegistry.register({ name: 'help', description: 'Learn how to play Travle', handler: this.handleHelp.bind(this) });
     this.commandRegistry.register({ name: 'reset', description: 'Reset your current game (testing)', handler: this.handleReset.bind(this) });
+    this.commandRegistry.register({ name: 'setchannel', description: 'Set this channel for daily puzzle messages (admin only)', handler: this.handleSetChannel.bind(this) });
   }
 
   /** Load or create today's session for a user */
@@ -195,10 +307,33 @@ class TravleBot extends BaseBotApplication {
   private async handleHelp(interaction: any): Promise<void> {
     const embed = EmbedBuilder.createHelp('travle',
       'Connect two countries by guessing intermediate countries that form a path through land borders.',
-      ['`/play` — Start or resume today\'s puzzle', '`/guess france` — Guess a country', '`/results` — Share your results']
+      ['`/play` — Start or resume today\'s puzzle', '`/guess france` — Guess a country', '`/results` — Share your results', '`/setchannel` — Set the channel for daily messages (admin)']
     );
     embed.addFields({ name: 'How colors work', value: '🟩 Green — reduced the path cost\n🟨 Yellow — nearby but didn\'t shorten the path\n🟥 Red — far from any useful path', inline: false });
     await interaction.reply({ embeds: [embed], ephemeral: true });
+  }
+
+  private async handleSetChannel(interaction: any): Promise<void> {
+    try {
+      // Check if user has admin permissions
+      if (!interaction.memberPermissions?.has('ManageGuild')) {
+        await interaction.reply({ content: 'You need the "Manage Server" permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      const channelId = interaction.channelId;
+      const guildId = interaction.guildId;
+      if (!guildId) {
+        await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+        return;
+      }
+
+      await this.configRepo.setChannelId(guildId, channelId);
+      await interaction.reply({ content: `✅ Daily puzzle messages will now be posted in <#${channelId}>`, ephemeral: true });
+    } catch (error) {
+      this.logger.error('Error in /setchannel:', error);
+      await interaction.reply({ content: 'Something went wrong.', ephemeral: true });
+    }
   }
 }
 
