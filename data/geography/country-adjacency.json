@@ -271,7 +271,6 @@
   ],
   "egypt": [
     "israel",
-    "jordan",
     "libya",
     "palestine",
     "sudan"
@@ -458,7 +457,6 @@
   "jamaica": [],
   "japan": [],
   "jordan": [
-    "egypt",
     "iraq",
     "israel",
     "palestine",
@@ -601,8 +599,7 @@
   ],
   "morocco": [
     "algeria",
-    "mauritania",
-    "spain"
+    "mauritania"
   ],
   "mozambique": [
     "eswatini",
@@ -835,7 +832,6 @@
   "spain": [
     "andorra",
     "france",
-    "morocco",
     "portugal"
   ],
   "sri lanka": [],
