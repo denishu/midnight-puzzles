@@ -165,7 +165,7 @@ export class SemanticEngine {
 
     let targetRank: number;
     if (!bestRank || bestRank > 1000) {
-      targetRank = 500;
+      targetRank = 1000;
     } else if (bestRank <= 2) {
       targetRank = 1;
     } else {

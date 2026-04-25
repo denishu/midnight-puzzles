@@ -13,6 +13,7 @@ import { SessionManager } from '../core/auth/SessionManager';
 import { GameSessionFactory } from '../core/auth/GameSessionFactory';
 import { GameStateRepository } from '../core/storage/GameStateRepository';
 import { DailyPuzzleRepository } from '../core/storage/DailyPuzzleRepository';
+import { ConfigRepository } from '../core/storage/ConfigRepository';
 import { EmbedBuilder } from '../core/discord/EmbedBuilder';
 import { DatabaseConnectionFactory } from '../core/storage/DatabaseConnection';
 import { UserRepository } from '../core/storage/UserRepository';
@@ -21,11 +22,12 @@ import { MigrationManager } from '../core/storage/migrations/migrate';
 // Load environment variables
 config();
 
-class SemantleBot extends BaseBotApplication {
+export class SemantleBot extends BaseBotApplication {
   private semantleGame!: SemantleGame;
   private gameFactory!: GameSessionFactory;
   private userRepo!: UserRepository;
   private sessionRepo!: GameStateRepository;
+  private configRepo!: ConfigRepository;
   // Maps userId -> sessionId for the current day
   private userSessions: Map<string, string> = new Map();
 
@@ -61,6 +63,7 @@ class SemantleBot extends BaseBotApplication {
     const semanticEngine = new SemanticEngine();
     this.userRepo = new UserRepository(db);
     this.sessionRepo = gameStateRepo;
+    this.configRepo = new ConfigRepository(db);
 
     this.semantleGame = new SemantleGame(semanticEngine, sessionManager, dailyPuzzleRepo);
     await this.semantleGame.initialize();
@@ -84,18 +87,82 @@ class SemantleBot extends BaseBotApplication {
 
   private async postDailyPuzzleMessage(): Promise<void> {
     try {
-      const embed = EmbedBuilder.createGameEmbed('semantle', '🔤 New Semantle Puzzle!');
-      embed.setDescription('A new word is waiting to be discovered!\n\nUse `/play` to start guessing.');
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setUTCDate(yesterday.getUTCDate() - 1);
 
-      for (const guild of this.client.guilds.cache.values()) {
-        const channel = guild.systemChannel || guild.channels.cache.find(
-          (ch: any) => ch.isTextBased() && ch.permissionsFor(guild.members.me!)?.has('SendMessages')
-        );
-        if (channel && 'send' in channel) {
-          await (channel as any).send({ embeds: [embed] });
-        }
+      // Get yesterday's completed games for the recap
+      const completedSessions = await this.sessionRepo.getCompletedSessionsForDate('semantle', yesterday);
+
+      // Group by server
+      const byServer = new Map<string, Array<typeof completedSessions[0]>>();
+      for (const session of completedSessions) {
+        const list = byServer.get(session.serverId) || [];
+        list.push(session);
+        byServer.set(session.serverId, list);
       }
-      this.logger.info('Daily Semantle puzzle message posted');
+
+      // Clean up old DB sessions and in-memory cache before posting
+      await this.sessionRepo.deleteOldSessions(7);
+      this.userSessions.clear();
+
+      // Post to all guilds the bot is in
+      for (const guild of this.client.guilds.cache.values()) {
+        // Find the designated channel
+        const serverConfig = await this.configRepo.getServerConfig(guild.id);
+        let channel: any = null;
+
+        if (serverConfig?.channelId) {
+          channel = guild.channels.cache.get(serverConfig.channelId);
+        }
+        if (!channel) {
+          channel = guild.systemChannel || guild.channels.cache.find(
+            (ch: any) => ch.isTextBased() && ch.permissionsFor(guild.members.me!)?.has('SendMessages')
+          );
+        }
+        if (!channel || !('send' in channel)) continue;
+
+        // --- Yesterday's recap ---
+        const serverSessions = byServer.get(guild.id) || [];
+        if (serverSessions.length > 0) {
+          // Update streak
+          const streak = await this.configRepo.getStreak(guild.id, 'semantle');
+          const yesterdayStr = yesterday.toISOString().split('T')[0]!;
+          const dayBeforeStr = new Date(yesterday.getTime() - 86400000).toISOString().split('T')[0]!;
+
+          const anyWin = serverSessions.some(s => s.result?.isWin !== false);
+          let newCount: number;
+          if (anyWin) {
+            newCount = (streak.lastDate === dayBeforeStr) ? streak.count + 1 : 1;
+          } else {
+            newCount = 0;
+          }
+          await this.configRepo.updateStreak(guild.id, 'semantle', newCount, yesterdayStr);
+
+          // Build recap embed
+          const recapEmbed = EmbedBuilder.createGameEmbed('semantle', '🔤 Yesterday\'s Semantle Recap');
+          const lines = serverSessions.map(s => {
+            const guessCount = s.attempts || s.gameData?.guesses?.length || '?';
+            const won = s.isComplete;
+            const score = won ? `✅ Solved in ${guessCount} guesses` : '❌ DNF';
+            return `**${s.username}** — ${score}`;
+          });
+
+          recapEmbed.setDescription(lines.join('\n'));
+          if (newCount > 0) {
+            recapEmbed.setFooter({ text: `🔥 Server streak: ${newCount} day${newCount > 1 ? 's' : ''}` });
+          }
+
+          await (channel as any).send({ embeds: [recapEmbed] });
+        }
+
+        // --- Today's new puzzle ---
+        const newEmbed = EmbedBuilder.createGameEmbed('semantle', '🔤 New Semantle Puzzle!');
+        newEmbed.setDescription('A new word is waiting to be discovered!\n\nUse `/play` to start guessing.');
+        await (channel as any).send({ embeds: [newEmbed] });
+      }
+
+      this.logger.info('Daily Semantle puzzle message posted with recap');
     } catch (e) {
       this.logger.error('Failed to post daily message:', e);
     }
@@ -142,6 +209,12 @@ class SemantleBot extends BaseBotApplication {
       name: 'reset',
       description: 'Reset your current Semantle game (for testing)',
       handler: this.handleResetCommand.bind(this)
+    });
+
+    this.commandRegistry.register({
+      name: 'setchannel',
+      description: 'Set this channel for daily puzzle messages (admin only)',
+      handler: this.handleSetChannelCommand.bind(this)
     });
   }
 
@@ -328,6 +401,7 @@ class SemantleBot extends BaseBotApplication {
         '`/guess happy` — Guess a word and see how close you are',
         '`/hint` — Get a hint (gives a word closer than your best)',
         '`/results` — Share your completed puzzle results',
+        '`/setchannel` — Set the channel for daily messages (admin)',
       ]
     );
     embed.addFields({
@@ -336,6 +410,28 @@ class SemantleBot extends BaseBotApplication {
       inline: false
     });
     await interaction.reply({ embeds: [embed], ephemeral: true });
+  }
+
+  private async handleSetChannelCommand(interaction: any): Promise<void> {
+    try {
+      if (!interaction.memberPermissions?.has('ManageGuild')) {
+        await interaction.reply({ content: 'You need the "Manage Server" permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      const channelId = interaction.channelId;
+      const guildId = interaction.guildId;
+      if (!guildId) {
+        await interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+        return;
+      }
+
+      await this.configRepo.setChannelId(guildId, channelId);
+      await interaction.reply({ content: `✅ Daily puzzle messages will now be posted in <#${channelId}>`, ephemeral: true });
+    } catch (error) {
+      this.logger.error('Error in /setchannel:', error);
+      await interaction.reply({ content: 'Something went wrong.', ephemeral: true });
+    }
   }
 }
 

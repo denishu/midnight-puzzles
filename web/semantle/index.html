@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="discord-client-id" content="1486533572398551170">
+<title>Semantle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Inter', system-ui, sans-serif; background: #f8f6fc; color: #1e1b2e;
+  height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+  align-items: center;
+}
+
+#app {
+  width: 100%; max-width: 520px; height: 100vh;
+  display: flex; flex-direction: column; overflow: hidden;
+  background: #fff; box-shadow: 0 0 40px rgba(124, 58, 237, 0.06);
+}
+
+/* Header */
+#header {
+  padding: 24px 24px 20px; text-align: center;
+  background: linear-gradient(180deg, #f3eeff 0%, #fff 100%);
+  border-bottom: 1px solid #ede8f5;
+}
+#header h1 {
+  font-size: 18px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: #7c3aed; margin-bottom: 10px;
+}
+#meta { font-size: 14px; color: #8b7fa8; letter-spacing: 0.04em; }
+#meta span { color: #5b21b6; font-weight: 600; }
+#hints {
+  font-size: 12px; color: #8b7fa8; margin: 8px 0; line-height: 1.6;
+  letter-spacing: 0.02em;
+}
+#hints span { color: #7c3aed; font-weight: 600; }
+
+/* Input */
+#input-area {
+  padding: 16px 24px; border-bottom: 1px solid #ede8f5;
+}
+#input-row { display: flex; gap: 8px; }
+#guess-input {
+  flex: 1; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid #ddd5ee; background: #faf8ff;
+  color: #1e1b2e; font-size: 14px; font-family: 'Inter', system-ui, sans-serif;
+  outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+}
+#guess-input:focus { border-color: #a855f7; box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.12); }
+#guess-input::placeholder { color: #b8aed0; }
+#submit-btn {
+  padding: 12px 20px; border-radius: 10px; border: none;
+  background: linear-gradient(135deg, #a855f7, #7c3aed); color: #fff;
+  font-weight: 700; font-size: 13px; cursor: pointer; letter-spacing: 0.03em;
+  text-transform: uppercase; transition: transform 0.1s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
+}
+#submit-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3); }
+#submit-btn:disabled { opacity: 0.3; cursor: default; transform: none; box-shadow: none; }
+#hint-btn {
+  padding: 12px 14px; border-radius: 10px; border: 1px solid #ede8f5;
+  background: #f3eeff; color: #7c3aed;
+  font-size: 16px; cursor: pointer; transition: background 0.2s;
+}
+#hint-btn:hover { background: #ebe3fc; }
+#hint-btn:disabled { opacity: 0.3; cursor: default; }
+</style>
+</head>
+<body>
+<style>
+/* Guess list */
+#guess-list {
+  flex: 1; overflow-y: auto; padding: 12px 24px;
+}
+.guess-row {
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+  border-radius: 10px; margin-bottom: 6px; font-size: 13px;
+  background: #faf8ff; border: 1px solid #ede8f5;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  animation: rowIn 0.2s ease-out;
+}
+.guess-row.latest {
+  border-color: #a855f7; box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.15);
+}
+@keyframes rowIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.guess-word { flex: 1; font-weight: 500; text-transform: lowercase; color: #1e1b2e; }
+.guess-similarity { width: 70px; text-align: right; font-variant-numeric: tabular-nums; color: #6b5f85; }
+.guess-rank { width: 80px; text-align: right; font-weight: 600; font-size: 12px; }
+.guess-bar { flex: 0 0 120px; height: 10px; border-radius: 5px; background: #ede8f5; overflow: hidden; }
+.guess-bar-fill { height: 100%; border-radius: 5px; transition: width 0.3s ease; }
+
+/* Temperature colors — gradient from cold to hot */
+.temp-hot .guess-rank { color: #dc2626; }
+.temp-hot .guess-bar-fill { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+.temp-warm .guess-rank { color: #d97706; }
+.temp-warm .guess-bar-fill { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
+.temp-tepid .guess-rank { color: #94a3b8; }
+.temp-tepid .guess-bar-fill { background: linear-gradient(90deg, #cbd5e1, #94a3b8); }
+.temp-ranked .guess-rank { color: #7c3aed; }
+.temp-ranked .guess-bar-fill { background: linear-gradient(90deg, #c4b5fd, #a855f7); }
+.temp-cold .guess-rank { color: #9ca3af; }
+.temp-cold .guess-bar-fill { background: #d1d5db; }
+.temp-correct .guess-rank { color: #059669; }
+.temp-correct .guess-bar-fill { background: linear-gradient(90deg, #34d399, #10b981); }
+.temp-correct { background: #ecfdf5; border-color: #6ee7b7; }
+
+/* Status toast */
+#status-bar {
+  display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  padding: 10px 20px; border-radius: 8px; font-size: 13px; text-align: center;
+  color: #fff; background: #1e1b2e; border: 1px solid rgba(124, 58, 237, 0.3);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15); z-index: 1500; white-space: nowrap;
+}
+#status-bar.active { display: block; animation: toastIn 0.2s ease-out; }
+@keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+/* Game over overlay */
+#game-over {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(30, 27, 46, 0.8); backdrop-filter: blur(8px);
+  z-index: 2000; justify-content: center; align-items: center;
+  flex-direction: column; gap: 8px;
+}
+#game-over.active { display: flex; }
+#game-over h2 { font-size: 32px; font-weight: 700; color: #fff; }
+#game-over p { font-size: 15px; color: #c4b5fd; max-width: 400px; text-align: center; line-height: 1.5; }
+#go-close {
+  margin-top: 20px; padding: 12px 32px; border-radius: 10px; border: none;
+  background: linear-gradient(135deg, #a855f7, #7c3aed); color: #fff;
+  font-weight: 700; font-size: 13px; cursor: pointer; letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+/* Info popup */
+#info-popup {
+  display: none; position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+  width: 320px; z-index: 1500;
+  background: #fff; border: 1px solid #ede8f5;
+  border-radius: 12px; padding: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  font-size: 13px; line-height: 1.6; color: #6b5f85;
+}
+#info-popup.active { display: block; animation: toastIn 0.2s ease-out; }
+#info-popup h3 { color: #7c3aed; font-size: 15px; margin-bottom: 10px; }
+#info-popup .dot-legend { display: inline-block; width: 8px; height: 8px; border-radius: 50%; vertical-align: middle; margin-right: 4px; }
+</style>
+
+<div id="app">
+<div id="header">
+  <h1>🔤 Semantle <span id="info-btn" title="How to play" style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; border:1.5px solid currentColor; font-size:14px; font-weight:400; font-style:normal; font-family:serif; cursor:pointer; opacity:0.5; vertical-align:middle; margin-left:6px; transition:opacity 0.2s; text-transform:none;">i</span></h1>
+  <div id="hints"></div>
+  <div id="meta">Guesses: <span id="guess-count">0</span> | Best rank: <span id="best-rank">—</span></div>
+</div>
+<div id="input-area">
+  <div id="input-row">
+    <input id="guess-input" type="text" placeholder="Type a word..." autocomplete="off" />
+    <button id="hint-btn" title="Get a hint">💡</button>
+    <button id="submit-btn">Guess</button>
+  </div>
+</div>
+<div id="guess-list"></div>
+</div>
+<div id="status-bar"></div>
+<div id="game-over">
+  <h2 id="go-title"></h2>
+  <p id="go-msg"></p>
+  <button id="go-close">Close</button>
+</div>
+
+<div id="info-popup">
+  <span id="info-close" style="position:absolute; top:10px; right:14px; cursor:pointer; font-size:18px; color:#8b7fa8; transition:color 0.2s;">✕</span>
+  <h3>How to Play</h3>
+  Guess the secret word using <b>semantic similarity</b> — how closely related words are in meaning, not spelling.
+  <br><br>
+  Words in the top 1000 most similar get a numbered rank. The closer to #1, the warmer you are.
+  <br><br>
+  <span class="dot-legend" style="background:#ef4444"></span> Hot — top 10, very close<br>
+  <span class="dot-legend" style="background:#f59e0b"></span> Warm — top 100<br>
+  <span class="dot-legend" style="background:#a855f7"></span> Ranked — top 1000<br>
+  <span class="dot-legend" style="background:#94a3b8"></span> Tepid — above 16% similarity, outside top 1000<br>
+  <span class="dot-legend" style="background:#d1d5db"></span> Cold — below 16% similarity<br>
+  <br>
+  Use the 💡 button for a hint. Keep guessing until you find the exact word!
+</div>
+
+<script type="module" src="app-game.js?v=2"></script>
+</body>
+</html>

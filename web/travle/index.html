@@ -36,14 +36,14 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #0a0e1a; color: 
   border-bottom: 1px solid rgba(59, 130, 246, 0.1);
 }
 #header h1 {
-  font-size: 14px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  font-size: 18px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
   color: #94a3b8; margin-bottom: 12px;
 }
-#puzzle-label { font-size: 18px; font-weight: 700; letter-spacing: 0.01em; }
+#puzzle-label { font-size: 22px; font-weight: 700; letter-spacing: 0.01em; }
 #puzzle-label span { color: #f59e0b; }
 #puzzle-label .arrow { color: #475569; margin: 0 6px; font-weight: 400; }
 #meta {
-  font-size: 11px; color: #64748b; margin-top: 10px; letter-spacing: 0.04em; text-transform: uppercase;
+  font-size: 13px; color: #64748b; margin-top: 10px; letter-spacing: 0.04em; text-transform: uppercase;
 }
 #meta span { color: #94a3b8; font-weight: 600; }
 
@@ -94,7 +94,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #0a0e1a; color: 
 }
 .guess-tag {
   display: inline-flex; align-items: center; gap: 7px;
-  padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500;
+  padding: 6px 14px; border-radius: 20px; font-size: 14px; font-weight: 500;
   text-transform: capitalize; letter-spacing: 0.02em;
   background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.06);
   transition: transform 0.15s; animation: tagIn 0.25s ease-out;
@@ -155,7 +155,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #0a0e1a; color: 
 <div id="map-panel"><div id="map"></div></div>
 <div id="sidebar">
   <div id="header">
-    <h1>🧭 Travle <span id="info-btn" title="How to play">ⓘ</span></h1>
+    <h1>🧭 Travle <span id="info-btn" title="How to play" style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; border:1.5px solid currentColor; font-size:14px; font-weight:400; font-family:serif; text-transform:none;">i</span></h1>
     <div id="puzzle-label">
       <span id="start-country"></span><span class="arrow">→</span><span id="end-country"></span>
     </div>

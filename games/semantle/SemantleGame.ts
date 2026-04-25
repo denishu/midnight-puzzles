@@ -219,7 +219,7 @@ export class SemantleGame implements Game {
       }
     } else {
       // Word is not in top 1000
-      if (similarity < 0.2) {
+      if (similarity < 0.16) {
         feedback = `❄️ Cold (${(similarity * 100).toFixed(2)}%)`;
       } else {
         feedback = `🌊 Tepid (${(similarity * 100).toFixed(2)}%)`;
@@ -259,6 +259,27 @@ export class SemantleGame implements Game {
         isComplete: session.isComplete
       }
     };
+  }
+
+  /**
+   * Get similarity thresholds for the 1st, 10th, and 1000th most similar words.
+   * Used by the web UI to show reference points.
+   */
+  getSimilarityThresholds(targetWord: string): { rank1: number | null; rank10: number | null; rank1000: number | null } {
+    const data = this.semanticEngine.getSemanticData(targetWord);
+    let rank1: number | null = null;
+    let rank10: number | null = null;
+    let rank1000: number | null = null;
+
+    for (const [word, rank] of data.rankings.entries()) {
+      const sim = data.similarities.get(word);
+      if (sim == null) continue;
+      if (rank === 1) rank1 = sim;
+      if (rank === 10) rank10 = sim;
+      if (rank === 1000) rank1000 = sim;
+    }
+
+    return { rank1, rank10, rank1000 };
   }
 
   /**

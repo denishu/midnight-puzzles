@@ -218,8 +218,6 @@ async function submitGuess() {
   if (result.isGameOver) {
     document.getElementById('submit-btn').disabled = true;
     showGameOver(result.isWin, result.feedback, result.winningPath);
-  } else {
-    updateStatus(result.feedback);
   }
 }
 
