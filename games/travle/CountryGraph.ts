@@ -41,6 +41,8 @@ export class CountryGraph {
     'saint vincent and the grenadines': ['st vincent'],
     'sao tome and principe': ['sao tome'],
     'guinea-bissau': ['guinea bissau'],
+    'bahamas': ['the bahamas'],
+    'gambia': ['the gambia'],
   };
 
   constructor() {

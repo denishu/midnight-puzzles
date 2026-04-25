@@ -20,11 +20,28 @@ let sessionUserId = null;
 let discordChannelId = null;
 let discordGuildId = null;
 
+// Display name overrides for formal/long GeoJSON names
+const DISPLAY_NAMES = {
+  'united republic of tanzania': 'Tanzania',
+  'the bahamas': 'Bahamas',
+  'the gambia': 'Gambia',
+  'republic of the congo': 'Congo',
+  'democratic republic of the congo': 'Democratic Republic of the Congo',
+  'republic of serbia': 'Serbia',
+  'czech republic': 'Czechia',
+};
+
 function titleCase(str) {
+  const lower = str.toLowerCase();
+  if (DISPLAY_NAMES[lower]) return DISPLAY_NAMES[lower];
   const minorWords = new Set(['of', 'the', 'and', 'in', 'on', 'at', 'to', 'for', 'a', 'an']);
-  return str.split(' ').map((w, i) =>
-    i === 0 || !minorWords.has(w) ? w.charAt(0).toUpperCase() + w.slice(1) : w
-  ).join(' ');
+  return str.split(' ').map((w, i) => {
+    // Handle hyphenated words (e.g. guinea-bissau → Guinea-Bissau)
+    if (w.includes('-')) {
+      return w.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('-');
+    }
+    return i === 0 || !minorWords.has(w) ? w.charAt(0).toUpperCase() + w.slice(1) : w;
+  }).join(' ');
 }
 
 // --- Map ---
@@ -159,7 +176,7 @@ async function loadPuzzle() {
     guessedNames.add(resolveCountryName(puzzle.end));
     for (const c of allCountries) {
       if (!guessedNames.has(c.name)) {
-        c.layer.setStyle({ fillColor: 'transparent', fillOpacity: 0, weight: 0.5, color: '#334155' });
+        c.layer.setStyle({ fillColor: '#0c1425', fillOpacity: 1, weight: 0.5, color: '#334155' });
         c.layer.bindTooltip(titleCase(c.name), { sticky: true, className: 'country-tooltip' });
       }
     }
@@ -277,7 +294,7 @@ function showGameOver(isWin, feedback, winningPath) {
 
   for (const c of allCountries) {
     if (!guessedNames.has(c.name)) {
-      c.layer.setStyle({ fillColor: 'transparent', fillOpacity: 0, weight: 0.5, color: '#334155' });
+      c.layer.setStyle({ fillColor: '#0c1425', fillOpacity: 1, weight: 0.5, color: '#334155' });
       c.layer.bindTooltip(titleCase(c.name), {
         sticky: true, className: 'country-tooltip'
       });
@@ -309,15 +326,18 @@ function showSuggestions(query) {
     }
   }
 
-  const matches = searchable
-    .filter(s => s.display.includes(q) || s.value.includes(q))
-    .sort((a, b) => {
-      const aS = a.display.startsWith(q) || a.value.startsWith(q) ? 0 : 1;
-      const bS = b.display.startsWith(q) || b.value.startsWith(q) ? 0 : 1;
-      return aS - bS || a.display.localeCompare(b.display);
-    })
-    .filter((s, i, arr) => arr.findIndex(x => x.display === s.display) === i)
-    .slice(0, 8);
+  // Prioritize "starts with" matches, then fill with "contains" if needed
+  const startsWith = searchable
+    .filter(s => s.display.startsWith(q) || s.value.startsWith(q))
+    .sort((a, b) => a.display.localeCompare(b.display))
+    .filter((s, i, arr) => arr.findIndex(x => x.display === s.display) === i);
+
+  const contains = searchable
+    .filter(s => !s.display.startsWith(q) && !s.value.startsWith(q) && (s.display.includes(q) || s.value.includes(q)))
+    .sort((a, b) => a.display.localeCompare(b.display))
+    .filter((s, i, arr) => arr.findIndex(x => x.display === s.display) === i);
+
+  const matches = [...startsWith, ...contains].slice(0, 10);
   if (matches.length === 0) { hideSuggestions(); return; }
   selectedSuggestion = -1;
   box.innerHTML = matches.map((m, i) =>
