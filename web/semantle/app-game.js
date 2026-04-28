@@ -42,7 +42,7 @@ async function loadState() {
   renderGuesses();
 
   if (gameOver && data.targetWord) {
-    showGameOver(data.targetWord, data.guessCount);
+    showGameOver(data.targetWord, data.guessCount, false);
   }
 }
 
@@ -80,7 +80,7 @@ async function submitGuess() {
   input.value = '';
 
   if (result.isComplete) {
-    showGameOver(result.targetWord, guesses.length);
+    showGameOver(result.targetWord, guesses.length, true);
   }
 }
 
@@ -136,7 +136,7 @@ function updateStatus(msg) {
   statusTimeout = setTimeout(() => bar.classList.remove('active'), 3000);
 }
 
-function showGameOver(targetWord, guessCount) {
+function showGameOver(targetWord, guessCount, shouldPost) {
   const overlay = document.getElementById('game-over');
   document.getElementById('go-title').textContent = '🎉 You found it!';
 
@@ -150,9 +150,15 @@ function showGameOver(targetWord, guessCount) {
     'The word was "' + targetWord + '" — solved in ' + guessCount + ' guesses' + bestRankText;
   overlay.classList.add('active');
 
-  // Auto-post results to Discord
-  if (discordChannelId || discordGuildId) {
-    const shareText = '🔤 Semantle — Solved in ' + guessCount + ' guesses';
+  // Only auto-post when the game was just won, not when loading a completed game
+  if (shouldPost && (discordChannelId || discordGuildId)) {
+    const user = getDiscordUser();
+    const username = user ? user.username : 'Someone';
+    const bestRankedForShare = guesses
+      .filter(g => g.rank && g.rank > 0)
+      .sort((a, b) => a.rank - b.rank)[0];
+    const bestText = bestRankedForShare ? ' | Best rank: #' + bestRankedForShare.rank : '';
+    const shareText = '**' + username + '** solved today\'s Semantle in ' + guessCount + ' guesses' + bestText;
     fetch('/game/complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

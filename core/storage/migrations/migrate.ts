@@ -39,18 +39,37 @@ export class MigrationManager {
   }
 
   async applyMigration(migration: Migration): Promise<void> {
-    await this.db.transaction(async (client) => {
-      // Apply the migration
-      await this.db.query(migration.up);
+    try {
+      await this.db.transaction(async (client) => {
+        // For multi-statement SQL (like initial schema), use exec-style execution
+        // Split carefully: only on semicolons that are NOT inside trigger BEGIN...END blocks
+        const statements = this.splitStatements(migration.up);
+        for (const stmt of statements) {
+          if (stmt.trim()) {
+            await this.db.query(stmt);
+          }
+        }
       
-      // Record the migration
-      await this.db.query(
-        'INSERT INTO migrations (version, name) VALUES (?, ?)',
-        [migration.version, migration.name]
-      );
+        // Record the migration
+        await this.db.query(
+          'INSERT INTO migrations (version, name) VALUES (?, ?)',
+          [migration.version, migration.name]
+        );
       
-      this.logger.info(`Applied migration ${migration.version}: ${migration.name}`);
-    });
+        this.logger.info(`Applied migration ${migration.version}: ${migration.name}`);
+      });
+    } catch (error: any) {
+      // Ignore "duplicate column" errors for idempotent migrations
+      if (error?.message?.includes('duplicate column')) {
+        await this.db.query(
+          'INSERT OR IGNORE INTO migrations (version, name) VALUES (?, ?)',
+          [migration.version, migration.name]
+        );
+        this.logger.info(`Migration ${migration.version} already applied (column exists)`);
+      } else {
+        throw error;
+      }
+    }
   }
 
   async rollbackMigration(migration: Migration): Promise<void> {
@@ -95,6 +114,44 @@ export class MigrationManager {
     this.logger.info('All migrations applied successfully');
   }
 
+  /**
+   * Split SQL into individual statements, handling trigger BEGIN...END blocks
+   */
+  private splitStatements(sql: string): string[] {
+    const results: string[] = [];
+    let current = '';
+    let depth = 0; // track BEGIN...END nesting
+
+    for (const line of sql.split('\n')) {
+      const upper = line.trim().toUpperCase();
+      // Skip comment-only lines
+      if (upper.startsWith('--') && !current.trim()) continue;
+
+      current += line + '\n';
+
+      if (upper === 'BEGIN') depth++;
+      if (upper.startsWith('END;') || upper === 'END') {
+        if (depth > 0) depth--;
+      }
+
+      // Only split on ; when not inside a BEGIN...END block
+      if (depth === 0 && line.trim().endsWith(';')) {
+        const stmt = current.replace(/;[\s]*$/, '').trim();
+        if (stmt && !stmt.startsWith('--')) {
+          results.push(stmt);
+        }
+        current = '';
+      }
+    }
+
+    const remaining = current.trim().replace(/;[\s]*$/, '').trim();
+    if (remaining && !remaining.startsWith('--')) {
+      results.push(remaining);
+    }
+
+    return results;
+  }
+
   private getAvailableMigrations(): Migration[] {
     return [
       {
@@ -105,7 +162,7 @@ export class MigrationManager {
       {
         version: 2,
         name: 'add_channel_id_to_server_configs',
-        up: 'ALTER TABLE server_configs ADD COLUMN channel_id TEXT;',
+        up: 'ALTER TABLE server_configs ADD COLUMN channel_id TEXT',
         down: 'ALTER TABLE server_configs DROP COLUMN channel_id;'
       }
     ];

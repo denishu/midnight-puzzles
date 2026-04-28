@@ -3,11 +3,11 @@
 ## Run the app
 
 ```bash
-# 1. Start the Express server (serves frontend + API on port 3000)
+# 1. Start the Express server (serves frontend + API on port 3002)
 npm run dev:travle-web
 
 # 2. Tunnel to expose localhost to Discord (separate terminal)
-cloudflared tunnel --url http://localhost:3000
+cloudflared tunnel --url http://localhost:3002
 
 # 3. Start the Discord bot (slash commands: /play, /guess, etc.) (separate terminal)
 npm run dev:travle
@@ -28,5 +28,5 @@ npm run deploy:travle
 ```
 TRAVLE_BOT_TOKEN=       # Discord bot token
 TRAVLE_CLIENT_ID=       # Discord application client ID
-DISCORD_CLIENT_SECRET=  # Discord OAuth2 client secret (for Activity SDK auth)
+TRAVLE_CLIENT_SECRET=  # Discord OAuth2 client secret (for Activity SDK auth)
 ```

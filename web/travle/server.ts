@@ -134,7 +134,7 @@ app.post('/game/discord/token', async (req, res) => {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         client_id: process.env.TRAVLE_CLIENT_ID || '',
-        client_secret: process.env.DISCORD_CLIENT_SECRET || '',
+        client_secret: process.env.TRAVLE_CLIENT_SECRET || '',
         grant_type: 'authorization_code',
         code,
       }),
@@ -282,7 +282,7 @@ app.post('/game/reset', (req, res) => {
 // Serve static files AFTER API routes so /api/* takes priority
 app.use(express.static(path.resolve(process.cwd(), 'web/travle')));
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3002;
 initGame().then(() => {
   app.listen(PORT, () => {
     console.log(`Travle web running at http://localhost:${PORT}`);

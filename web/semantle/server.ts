@@ -106,7 +106,7 @@ app.post('/game/discord/token', async (req, res) => {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         client_id: process.env.SEMANTLE_CLIENT_ID || '',
-        client_secret: process.env.DISCORD_CLIENT_SECRET || '',
+        client_secret: process.env.SEMANTLE_CLIENT_SECRET || '',
         grant_type: 'authorization_code',
         code,
       }),

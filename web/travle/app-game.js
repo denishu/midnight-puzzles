@@ -262,7 +262,9 @@ function showGameOver(isWin, feedback, winningPath) {
   const colors = guesses.map(g => g.status === 'green' ? '🟩' : g.status === 'yellow' ? '🟨' : '🟥').join('');
   const over = guesses.length - (puzzle.shortestPathLength - 1);
   const score = isWin ? (over <= 0 ? '✨ Perfect' : '+' + over) : '❌ DNF';
-  const shareText = '🧭 Travle — ' + score + '\n' + titleCase(puzzle.start) + ' → ' + titleCase(puzzle.end) + ' (' + guesses.length + ' guesses)\n' + colors;
+  const user = getDiscordUser();
+  const username = user ? user.username : 'Someone';
+  const shareText = '**' + username + '** — ' + score + '\n🧭 ' + titleCase(puzzle.start) + ' → ' + titleCase(puzzle.end) + ' (' + guesses.length + ' guesses)\n' + colors;
 
   const shareEl = document.getElementById('go-share');
   if (shareEl) {
