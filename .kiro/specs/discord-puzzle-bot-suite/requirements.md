@@ -2,109 +2,115 @@
 
 ## Introduction
 
-A Discord bot suite that provides three daily puzzle games: Semantle (semantic word guessing), Travle (country path finding), and Duotrigordle (32 simultaneous Wordles). Users can play these games through Discord interactions, track their progress, and share results with other server members.
+A Discord bot suite that provides three daily puzzle games: Semantle (semantic word guessing), Travle (country path finding), and Duotrigordle (32 simultaneous Wordles). Each game runs as a standalone Discord bot with slash commands AND a web-based Discord Activity (embedded iframe) for richer gameplay. Users can play through either interface, track progress, and share results.
 
 ## Glossary
 
 - **Discord_Bot_Suite**: The complete system providing three puzzle games through Discord
+- **Discord_Activity**: A web app embedded in Discord's iframe via the Embedded App SDK
 - **Semantle_Game**: A word guessing game using semantic similarity rankings
 - **Travle_Game**: A geography game requiring players to find country paths between two endpoints
 - **Duotrigordle_Game**: A word puzzle game with 32 simultaneous Wordle grids
 - **Daily_Puzzle**: A puzzle instance that changes once per day and is consistent for all players
 - **Game_Session**: An individual player's attempt at a daily puzzle
-- **Semantic_Dictionary**: A database of words with their semantic similarity vectors
-- **Country_Adjacency_Graph**: A data structure representing which countries share borders
-- **Word_Dictionary**: A collection of valid 5-letter words for Wordle-style games
-- **Discord_Interaction**: Commands, buttons, or slash commands used to interact with the bot
+- **Semantic_Dictionary**: GloVe word vectors for calculating semantic similarity
+- **Country_Adjacency_Graph**: A data structure representing which countries share land borders
+- **Word_Dictionary**: Wordle answer list (2,315 words) and valid guesses list (12,972 words)
+- **Discord_Interaction**: Slash commands used to interact with the bot
 - **Game_State**: The current progress of a player's game session
-- **Result_Sharing**: The ability to post game results in a standardized format
+- **Result_Sharing**: Auto-posting game results as Discord embeds on completion
+- **Daily_Recap**: Midnight message showing yesterday's results, server streak, and new puzzle
+- **Server_Streak**: Consecutive days where at least one server member completed the puzzle
 
 ## Requirements
 
-### Requirement 1
+### Requirement 1: Game Initiation and Session Management
 
-**User Story:** As a Discord server member, I want to start daily puzzle games through bot commands, so that I can play engaging word and geography games with my community.
+**User Story:** As a Discord server member, I want to start daily puzzle games through bot commands or Activities, so that I can play engaging word and geography games with my community.
 
 #### Acceptance Criteria
 
-1. WHEN a user types a game command, THE Discord_Bot_Suite SHALL initiate the corresponding Daily_Puzzle for that user
-2. WHEN a Daily_Puzzle is requested, THE Discord_Bot_Suite SHALL check if the user has already started today's puzzle and resume their Game_Session
-3. WHEN multiple users request the same Daily_Puzzle, THE Discord_Bot_Suite SHALL provide identical puzzle content to ensure fair competition
-4. WHERE a user has completed today's puzzle, THE Discord_Bot_Suite SHALL display their results and prevent additional attempts
-5. WHEN a game command is issued, THE Discord_Bot_Suite SHALL respond within 3 seconds with the game interface
+1. WHEN a user types a game command or launches an Activity, THE bot SHALL initiate the corresponding Daily_Puzzle for that user
+2. WHEN a Daily_Puzzle is requested, THE bot SHALL check if the user has already started today's puzzle and resume their Game_Session
+3. WHEN multiple users request the same Daily_Puzzle, THE bot SHALL provide identical puzzle content to ensure fair competition
+4. WHERE a user has completed today's puzzle, THE bot SHALL display their results and prevent additional attempts
+5. WHEN a game is played via Activity, THE bot SHALL use Discord SDK authentication to identify users and isolate sessions
 
-### Requirement 2
+### Requirement 2: Semantle Gameplay
 
 **User Story:** As a Semantle player, I want to guess words and receive semantic similarity feedback, so that I can deduce the target word through logical reasoning.
 
 #### Acceptance Criteria
 
-1. WHEN a user submits a word guess, THE Semantle_Game SHALL calculate semantic similarity to the target word using the Semantic_Dictionary
-2. WHEN the guessed word ranks in the top 1000 semantically similar words, THE Semantle_Game SHALL display the exact ranking number
-3. WHEN the guessed word is not in the top 1000, THE Semantle_Game SHALL respond with "cold" or "tepid" based on proximity thresholds
-4. WHEN the user guesses the exact target word, THE Semantle_Game SHALL declare victory and display the final results
-5. WHEN a guess is made, THE Semantle_Game SHALL maintain a history of all previous guesses with their rankings
+1. WHEN a user submits a word guess, THE Semantle_Game SHALL calculate cosine similarity using GloVe word vectors
+2. WHEN the guessed word ranks in the top 1000 most similar words, THE Semantle_Game SHALL display the exact ranking number with color coding (hot/warm/ranked)
+3. WHEN the guessed word is not in the top 1000, THE Semantle_Game SHALL respond with "cold" (<16% similarity) or "tepid" (≥16% similarity)
+4. WHEN the user guesses the exact target word, THE Semantle_Game SHALL declare victory and auto-post results to Discord
+5. WHEN a guess is made, THE Semantle_Game SHALL maintain a sorted history of all guesses with their rankings and similarity scores
+6. WHEN the game starts, THE Semantle_Game SHALL display similarity thresholds for rank 1, 10, and 1000
+7. WHEN a hint is requested, THE Semantle_Game SHALL provide a word at approximately half the user's best rank (starting at rank 1000)
 
-### Requirement 3
+### Requirement 3: Travle Gameplay
 
 **User Story:** As a Travle player, I want to find country paths between two endpoints, so that I can test my geographical knowledge through strategic pathfinding.
 
 #### Acceptance Criteria
 
-1. WHEN a Travle_Game starts, THE Discord_Bot_Suite SHALL present two countries that the player must connect via land borders
-2. WHEN a user guesses a country, THE Travle_Game SHALL validate the guess against the Country_Adjacency_Graph for valid connections
-3. WHEN a valid country is guessed, THE Travle_Game SHALL add it to the path and update the visual representation
-4. WHEN an invalid country connection is attempted, THE Travle_Game SHALL reject the guess and decrement remaining attempts
-5. WHEN the path successfully connects both endpoints, THE Travle_Game SHALL declare victory and show the complete route
-6. WHEN attempts are exhausted without completion, THE Travle_Game SHALL reveal the optimal solution path
+1. WHEN a Travle_Game starts, THE bot SHALL present two countries with a shortest path of 3-11 steps
+2. WHEN a user guesses a country, THE Travle_Game SHALL evaluate it using 0-1 BFS weighted pathfinding
+3. WHEN a guess reduces the path cost, THE Travle_Game SHALL color it green
+4. WHEN a guess is nearby but doesn't reduce cost, THE Travle_Game SHALL color it yellow (cost through guess ≤ cost_before + 1)
+5. WHEN a guess is far from any useful path, THE Travle_Game SHALL color it red
+6. WHEN the path cost reaches 0, THE Travle_Game SHALL declare victory and show the winning chain
+7. WHEN attempts are exhausted, THE Travle_Game SHALL reveal the optimal solution path
+8. WHEN playing via Activity, THE Travle_Game SHALL display an interactive Leaflet map with country highlighting
 
-### Requirement 4
+### Requirement 4: Duotrigordle Gameplay
 
 **User Story:** As a Duotrigordle player, I want to solve 32 Wordle puzzles simultaneously, so that I can challenge myself with an extreme word puzzle variant.
 
 #### Acceptance Criteria
 
-1. WHEN a Duotrigordle_Game starts, THE Discord_Bot_Suite SHALL generate 32 unique 5-letter target words from the Word_Dictionary
+1. WHEN a Duotrigordle_Game starts, THE bot SHALL generate 32 unique 5-letter target words from the Wordle answer list
 2. WHEN a user submits a 5-letter word guess, THE Duotrigordle_Game SHALL apply the guess to all 32 grids simultaneously
-3. WHEN a guess is processed, THE Duotrigordle_Game SHALL provide color-coded feedback for each grid position across all 32 puzzles
-4. WHEN a target word is correctly guessed, THE Duotrigordle_Game SHALL mark that grid as completed and exclude it from future displays
+3. WHEN a guess is processed, THE Duotrigordle_Game SHALL provide green/yellow/gray feedback for each letter position across all 32 grids
+4. WHEN a target word is correctly guessed, THE Duotrigordle_Game SHALL mark that grid as completed
 5. WHEN all 32 words are guessed within 37 attempts, THE Duotrigordle_Game SHALL declare victory
-6. WHEN 37 attempts are used without completing all grids, THE Duotrigordle_Game SHALL reveal all remaining target words
+6. WHEN 37 attempts are used without completing all grids, THE Duotrigordle_Game SHALL reveal remaining target words
 
-### Requirement 5
+### Requirement 5: Result Sharing and Daily Recaps
 
-**User Story:** As a puzzle game player, I want to share my results with other server members, so that I can compare performance and celebrate achievements.
-
-#### Acceptance Criteria
-
-1. WHEN a game is completed, THE Discord_Bot_Suite SHALL generate a standardized result summary with key statistics
-2. WHEN result sharing is requested, THE Discord_Bot_Suite SHALL format results using spoiler tags to prevent revealing solutions
-3. WHEN results are shared, THE Discord_Bot_Suite SHALL include game type, completion status, attempt count, and time taken
-4. WHERE applicable, THE Discord_Bot_Suite SHALL include visual representations like grid patterns or path diagrams
-5. WHEN results are posted, THE Discord_Bot_Suite SHALL allow other users to react or respond without revealing puzzle details
-6. WHEN a server leaderboard is requested, THE Discord_Bot_Suite SHALL display daily stats for all server members who played today's puzzle
-7. WHEN displaying server stats, THE Discord_Bot_Suite SHALL show completion status and attempt counts without revealing solutions
-
-### Requirement 6
-
-**User Story:** As a server administrator, I want to configure bot settings and monitor usage, so that I can customize the experience for my community.
+**User Story:** As a puzzle game player, I want my results shared automatically and see daily recaps, so that I can compare performance with my community.
 
 #### Acceptance Criteria
 
-1. WHEN configuration commands are used, THE Discord_Bot_Suite SHALL allow administrators to enable or disable specific games per server
-2. WHEN daily puzzles reset, THE Discord_Bot_Suite SHALL automatically generate new content at midnight UTC
-3. WHEN usage statistics are requested, THE Discord_Bot_Suite SHALL provide aggregate data without revealing individual player information
-4. WHERE custom word lists are provided, THE Discord_Bot_Suite SHALL validate and integrate them into the Word_Dictionary
-5. WHEN server settings are modified, THE Discord_Bot_Suite SHALL persist changes and apply them to future game sessions
+1. WHEN a game is completed (win or loss), THE bot SHALL auto-post a Discord embed with the player's username, score, and game-specific details
+2. WHEN results are posted for Travle, THE embed SHALL include colored squares (🟩🟨🟥) in guess order and a score relative to optimal path
+3. WHEN results are posted for Semantle, THE embed SHALL include guess count and best rank achieved
+4. WHEN midnight UTC arrives, THE bot SHALL post a recap of yesterday's results per server with all players' scores
+5. WHEN posting a recap, THE bot SHALL update and display the server streak (consecutive days with at least one winner)
+6. WHEN posting a recap, THE bot SHALL follow it with the new daily puzzle announcement
+7. WHEN a /setchannel command is used by an admin, THE bot SHALL save that channel for all daily messages and result posts
 
-### Requirement 7
+### Requirement 6: Server Configuration
 
-**User Story:** As a system operator, I want reliable data management and error handling, so that the bot maintains consistent performance across all Discord servers.
+**User Story:** As a server administrator, I want to configure where bot messages go, so that I can keep my server organized.
 
 #### Acceptance Criteria
 
-1. WHEN parsing user input, THE Discord_Bot_Suite SHALL validate it against the specified grammar for each game type
-2. WHEN storing game data, THE Discord_Bot_Suite SHALL encode it using JSON and persist it to reliable storage
-3. WHEN data corruption is detected, THE Discord_Bot_Suite SHALL gracefully handle errors and restore from backups where possible
-4. WHEN external API calls fail, THE Discord_Bot_Suite SHALL implement retry logic with exponential backoff
-5. WHEN system resources are constrained, THE Discord_Bot_Suite SHALL prioritize active game sessions over background tasks
+1. WHEN /setchannel is used, THE bot SHALL save the channel ID in server_configs (shared across all 3 bots)
+2. WHEN posting daily messages, THE bot SHALL use the configured channel, falling back to system channel
+3. WHEN posting results from an Activity, THE bot SHALL look up the configured channel via the guild ID from the SDK
+4. WHEN the bot lacks permission to post in the configured channel, THE bot SHALL log the error clearly
+
+### Requirement 7: Technical Infrastructure
+
+**User Story:** As a system operator, I want reliable data management and dual-interface support, so that the bots work consistently via both slash commands and Activities.
+
+#### Acceptance Criteria
+
+1. WHEN running as an Activity, THE web server SHALL authenticate users via Discord Embedded App SDK (authorize → token exchange → authenticate)
+2. WHEN storing game data, THE bot SHALL use SQLite for development and PostgreSQL for production
+3. WHEN the database schema changes, THE migration system SHALL handle multi-statement SQL and trigger blocks correctly
+4. WHEN sessions need cleanup, THE web server SHALL purge in-memory sessions daily at midnight UTC
+5. WHEN the Activity web server saves completed games, THE data SHALL be written to the shared database so the bot process can read it for recaps
