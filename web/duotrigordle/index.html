@@ -12,7 +12,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
   font-family: 'Inter', system-ui, sans-serif;
-  background: #0a0e1a; color: #e0e0e0;
+  background: #000; color: #e0e0e0;
   height: 100vh; display: flex; flex-direction: column;
   overflow: hidden; align-items: center;
 }
@@ -234,7 +234,10 @@ body {
 
 <div id="early-loss">
   <span class="el-text"></span>
-  <button id="give-up-btn">Give Up</button>
+  <div style="display:flex; gap:8px; align-items:center;">
+    <button id="give-up-btn">Give Up</button>
+    <span id="early-loss-close" style="cursor:pointer; font-size:16px; color:#64748b; transition:color 0.2s;">✕</span>
+  </div>
 </div>
 
 <div id="game-over">

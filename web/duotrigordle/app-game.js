@@ -200,9 +200,9 @@ function updateStatus(msg) {
   statusTimeout = setTimeout(() => bar.classList.remove('active'), 3000);
 }
 
-function showGameOver(isWin, completedGrids, guessesUsed, shouldPost) {
+function showGameOver(isWin, completedGrids, guessesUsed, shouldPost, gaveUp = false) {
   const overlay = document.getElementById('game-over');
-  document.getElementById('go-title').textContent = isWin ? '🎉 All 32 solved!' : '😞 Out of guesses';
+  document.getElementById('go-title').textContent = isWin ? '🎉 All 32 solved!' : gaveUp ? '🏳️ Gave up' : '😞 Out of guesses';
   document.getElementById('go-msg').textContent = isWin
     ? 'Solved all 32 grids in ' + guessesUsed + '/37 guesses!'
     : completedGrids + '/32 grids solved in ' + guessesUsed + '/37 guesses.';
@@ -214,7 +214,9 @@ function showGameOver(isWin, completedGrids, guessesUsed, shouldPost) {
     const username = user ? user.username : 'Someone';
     const score = isWin
       ? '✅ Solved 32/32 in ' + guessesUsed + '/37 guesses'
-      : '❌ ' + completedGrids + '/32 grids (' + guessesUsed + '/37 guesses)';
+      : gaveUp
+        ? '🏳️ Gave up — ' + completedGrids + '/32 grids (' + guessesUsed + '/37 guesses)'
+        : '❌ ' + completedGrids + '/32 grids (' + guessesUsed + '/37 guesses)';
     const shareText = '**' + username + '** — ' + score;
 
     fetch('/game/complete', {
@@ -251,7 +253,7 @@ async function giveUp() {
   updateProgress(result);
   document.getElementById('submit-btn').disabled = true;
   document.getElementById('guess-input').disabled = true;
-  showGameOver(false, result.completedGrids, result.guessesUsed, true);
+  showGameOver(false, result.completedGrids, result.guessesUsed, true, true);
 }
 
 function toggleInfo() {
@@ -266,6 +268,9 @@ document.getElementById('guess-input').addEventListener('keydown', (e) => {
 });
 document.getElementById('submit-btn').addEventListener('click', submitGuess);
 document.getElementById('give-up-btn').addEventListener('click', giveUp);
+document.getElementById('early-loss-close').addEventListener('click', () => {
+  document.getElementById('early-loss').classList.remove('active');
+});
 document.getElementById('go-close').addEventListener('click', () => {
   document.getElementById('game-over').classList.remove('active');
 });

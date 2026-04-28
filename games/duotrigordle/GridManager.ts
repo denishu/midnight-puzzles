@@ -87,6 +87,9 @@ export class GridManager {
     if (!this.validator.isValidGuess(word)) {
       return this.errorResult('Not a valid word.');
     }
+    if (this.grids.length > 0 && this.grids[0]!.guesses.some(g => g.word === word)) {
+      return this.errorResult('Already guessed.');
+    }
 
     this.guessCount++;
     const feedbacks: WordGuess[] = [];

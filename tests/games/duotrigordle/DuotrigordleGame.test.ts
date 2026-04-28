@@ -231,6 +231,44 @@ describe('GridManager.applyGuess', () => {
     expect(unsolved.length).toBe(GRID_COUNT - 1);
     expect(unsolved.every(u => u.gridIndex !== 0)).toBe(true);
   });
+
+  it('rejects duplicate guesses', () => {
+    const { gm } = setupGame();
+    const r1 = gm.applyGuess(EXTRA_GUESSES[0]!);
+    expect(r1.isValid).toBe(true);
+    const r2 = gm.applyGuess(EXTRA_GUESSES[0]!);
+    expect(r2.isValid).toBe(false);
+    expect(r2.error).toContain('Already guessed');
+    // Should not have incremented guess count
+    expect(gm.getGuessCount()).toBe(1);
+  });
+
+  it('detects early loss when remaining grids exceed remaining guesses', () => {
+    const targets = SAMPLE_ANSWERS.slice(0, GRID_COUNT);
+    const pool: string[] = [];
+    for (let i = 0; i < 50; i++) {
+      const c1 = String.fromCharCode(97 + Math.floor(i / 26));
+      const c2 = String.fromCharCode(97 + (i % 26));
+      pool.push('zzz' + c1 + c2);
+    }
+    const v = makeValidator([...targets, ...pool]);
+    const gm = new GridManager(v);
+    gm.initializeGrids({ targetWords: targets, date: '2026-01-01' });
+    const tracker = new ProgressTracker(gm);
+
+    // Use up guesses without solving any grids
+    for (let i = 0; i < 6; i++) {
+      gm.applyGuess(pool[i]!);
+    }
+
+    const summary = tracker.getSummary();
+    const remaining = summary.totalGrids - summary.completedGrids;
+    const guessesLeft = summary.maxGuesses - summary.guessesUsed;
+    // 32 grids unsolved, 31 guesses left → impossible to win
+    expect(remaining).toBe(32);
+    expect(guessesLeft).toBe(31);
+    expect(remaining > guessesLeft).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
