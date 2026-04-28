@@ -108,6 +108,7 @@ function buildStateResponse(session: GameSession) {
     isGameOver: summary.isGameOver || !!session.givenUp,
     isWin: summary.isWin,
     isLoss: summary.isLoss || !!session.givenUp,
+    gaveUp: !!session.givenUp,
     progress: session.tracker.formatProgress(),
     // Reveal unsolved targets on game over
     unsolvedTargets: (summary.isGameOver || session.givenUp) ? session.gridManager.getUnsolvedTargets() : undefined,

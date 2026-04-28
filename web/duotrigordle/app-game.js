@@ -7,6 +7,7 @@ let discordChannelId = null;
 let discordGuildId = null;
 let gameOver = false;
 let currentInput = '';
+let lastTargetWords = null;
 
 // Keyboard letter states: best status across all grids
 const letterStates = {};
@@ -92,6 +93,19 @@ function updateKeyboardStates(grids) {
 function updateProgress(data) {
   document.getElementById('grids-solved').textContent = data.completedGrids;
   document.getElementById('guesses-used').textContent = data.guessesUsed;
+  const gridsLeft = data.totalGrids - data.completedGrids;
+  const guessesLeft = data.maxGuesses - data.guessesUsed;
+  const buffer = guessesLeft - gridsLeft;
+  const el = document.getElementById('buffer');
+  if (data.isGameOver || gridsLeft === 0) {
+    el.textContent = '';
+  } else if (buffer >= 0) {
+    el.textContent = '(+' + buffer + ')';
+    el.style.color = buffer > 3 ? '#22c55e' : '#eab308';
+  } else {
+    el.textContent = '(' + buffer + ')';
+    el.style.color = '#ef4444';
+  }
 }
 
 function buildKeyboard() {
@@ -145,8 +159,10 @@ async function loadState() {
   document.getElementById('submit-btn').disabled = gameOver;
   document.getElementById('guess-input').disabled = gameOver;
 
+  if (data.targetWords) lastTargetWords = data.targetWords;
+
   if (gameOver) {
-    showGameOver(data.isWin, data.completedGrids, data.guessesUsed, false);
+    showGameOver(data.isWin, data.completedGrids, data.guessesUsed, false, data.gaveUp);
   }
 }
 
@@ -182,6 +198,8 @@ async function submitGuess() {
   document.getElementById('guess-input').disabled = gameOver;
   input.value = '';
 
+  if (result.targetWords) lastTargetWords = result.targetWords;
+
   if (result.isGameOver) {
     showGameOver(result.isWin, result.completedGrids, result.guessesUsed, true);
   } else {
@@ -207,6 +225,17 @@ function showGameOver(isWin, completedGrids, guessesUsed, shouldPost, gaveUp = f
     ? 'Solved all 32 grids in ' + guessesUsed + '/37 guesses!'
     : completedGrids + '/32 grids solved in ' + guessesUsed + '/37 guesses.';
   overlay.classList.add('active');
+
+  // Show word list card on win
+  const wordsEl = document.getElementById('go-words');
+  if (isWin && lastTargetWords && lastTargetWords.length > 0) {
+    wordsEl.innerHTML = lastTargetWords.map((w, i) =>
+      '<span class="go-word">' + (i + 1) + '. ' + w + '</span>'
+    ).join('');
+    wordsEl.classList.add('active');
+  } else {
+    wordsEl.classList.remove('active');
+  }
 
   // Auto-post results to Discord
   if (shouldPost && (discordChannelId || discordGuildId)) {

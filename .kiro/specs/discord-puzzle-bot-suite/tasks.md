@@ -104,7 +104,7 @@
   - Auto-post results embed to Discord channel on completion
   - Cloudflare tunnel setup
 
-- [ ] 16. Duotrigordle unit tests
+- [x] 16. Duotrigordle unit tests
   - Grid generation (32 unique words)
   - Guess evaluation (green/yellow/gray logic)
   - Grid completion tracking
