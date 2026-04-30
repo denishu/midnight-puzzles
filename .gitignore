@@ -50,6 +50,7 @@ temp/
 # Large data files
 data/dictionaries/semantic-vectors.txt
 data/dictionaries/glove.*.txt
+data/dictionaries/rankings-840b.json
 *.vec
 *.bin
 

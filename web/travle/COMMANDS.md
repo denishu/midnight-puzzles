@@ -17,7 +17,7 @@ npm run dev:travle
 
 ```bash
 # Build the Discord SDK bundle (only needed if you edit discord-sdk.js or update the SDK package)
-node web/travle/build-sdk.js
+node scripts/build-sdk.js
 
 # Deploy slash commands to Discord (run once, or after changing command definitions)
 npm run deploy:travle

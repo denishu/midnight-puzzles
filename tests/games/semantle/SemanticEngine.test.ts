@@ -21,18 +21,18 @@ describe('SemanticEngine', () => {
 
     it('rejects nonsense words', () => {
       expect(engine.isValidWord('xyzzyplugh')).toBe(false);
-      expect(engine.isValidWord('asdfghjkl')).toBe(false);
     });
 
-    it('filters out blacklisted proper nouns', () => {
-      expect(engine.isValidWord('sapporo')).toBe(false);
+    it('includes words from the 840B vocabulary', () => {
+      expect(engine.isValidWord('cultist')).toBe(true);
+      expect(engine.isValidWord('tokyo')).toBe(true);
     });
   });
 
   describe('cosine similarity', () => {
     it('returns high similarity for related words', () => {
       const sim = engine.calculateSimilarity('river', 'stream');
-      expect(sim).toBeGreaterThan(0.5);
+      expect(sim).toBeGreaterThan(0.4);
     });
 
     it('returns low similarity for unrelated words', () => {

@@ -51,11 +51,16 @@ export class SemantleGame implements Game {
   }
 
   private loadTargetWords(): void {
-    const filePath = path.join(__dirname, '../../data/dictionaries/target-words.txt');
+    // Try new curated 840B target list first, fall back to old list
+    const newPath = path.join(__dirname, '../../data/dictionaries/target-words-840b.txt');
+    const oldPath = path.join(__dirname, '../../data/dictionaries/target-words.txt');
+    const filePath = fs.existsSync(newPath) ? newPath : oldPath;
     try {
       const content = fs.readFileSync(filePath, 'utf-8');
-      this.targetWords = content.split('\n').map(w => w.trim()).filter(w => w.length > 0);
-      this.logger.info(`Loaded ${this.targetWords.length} target words from file`);
+      this.targetWords = content.split('\n')
+        .map(w => w.trim().toLowerCase())
+        .filter(w => w.length > 0 && !w.startsWith('#'));
+      this.logger.info(`Loaded ${this.targetWords.length} target words from ${path.basename(filePath)}`);
     } catch {
       this.logger.warn('target-words.txt not found, using built-in word list');
       this.targetWords = [
@@ -200,7 +205,7 @@ export class SemantleGame implements Game {
         isValid: true,
         feedback: `🎉 Congratulations! You found the word "${targetWord}" in ${session.attempts + 1} guesses!`,
         isComplete: true,
-        data: { rank: 0, similarity: 1.0, result }
+        data: { rank: 0, similarity: 1.0, result, bestRank: session.gameData.bestRank }
       };
     }
 
