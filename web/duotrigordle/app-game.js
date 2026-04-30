@@ -241,12 +241,14 @@ function showGameOver(isWin, completedGrids, guessesUsed, shouldPost, gaveUp = f
   if (shouldPost && (discordChannelId || discordGuildId)) {
     const user = getDiscordUser();
     const username = user ? user.username : 'Someone';
+    const extra = guessesUsed - 32;
+    const extraText = extra <= 0 ? '✨ Perfect' : '+' + extra;
     const score = isWin
-      ? '✅ Solved 32/32 in ' + guessesUsed + '/37 guesses'
+      ? '**' + username + '** — ✅ ' + extraText + '\nSolved 32 words in ' + guessesUsed + '/37 guesses'
       : gaveUp
-        ? '🏳️ Gave up — ' + completedGrids + '/32 grids (' + guessesUsed + '/37 guesses)'
-        : '❌ ' + completedGrids + '/32 grids (' + guessesUsed + '/37 guesses)';
-    const shareText = '**' + username + '** — ' + score;
+        ? '**' + username + '** — 🏳️ Gave up\n' + completedGrids + '/32 grids in ' + guessesUsed + '/37 guesses'
+        : '**' + username + '** — ❌ DNF\n' + completedGrids + '/32 grids in ' + guessesUsed + '/37 guesses';
+    const shareText = score;
 
     fetch('/game/complete', {
       method: 'POST',

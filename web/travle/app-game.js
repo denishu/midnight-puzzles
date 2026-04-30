@@ -378,6 +378,26 @@ function toggleInfo() {
 }
 window.toggleInfo = toggleInfo;
 
+async function requestHint() {
+  if (gameOver) return;
+  const resp = await fetch('/game/hint' + getSessionParam());
+  const data = await resp.json();
+  if (!data.hint) {
+    updateStatus('No hint available');
+    return;
+  }
+  // Highlight the country outline on the map (no tooltip, no name)
+  const hintCountry = data.hint;
+  const resolved = resolveCountryName(hintCountry);
+  const entry = countryLookup[resolved] || countryLookup[hintCountry.toLowerCase()]
+    || allCountries.find(c => c.name.includes(hintCountry.toLowerCase()) || hintCountry.toLowerCase().includes(c.name));
+  if (entry) {
+    const layer = entry.layer || entry;
+    layer.setStyle({ fillColor: 'transparent', fillOpacity: 0, weight: 2, color: '#4ade80', dashArray: '6 4' });
+    layer.bringToFront();
+  }
+}
+
 document.getElementById('guess-input').addEventListener('input', (e) => showSuggestions(e.target.value));
 document.getElementById('guess-input').addEventListener('keydown', (e) => {
   if (e.key === 'ArrowDown') { e.preventDefault(); navigateSuggestions(1); }
@@ -386,6 +406,7 @@ document.getElementById('guess-input').addEventListener('keydown', (e) => {
   else if (e.key === 'Escape') { hideSuggestions(); }
 });
 document.getElementById('submit-btn').addEventListener('click', submitGuess);
+document.getElementById('hint-btn').addEventListener('click', requestHint);
 document.getElementById('go-close').addEventListener('click', closeOverlay);
 document.getElementById('info-btn').addEventListener('click', toggleInfo);
 document.getElementById('info-close').addEventListener('click', toggleInfo);

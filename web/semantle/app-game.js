@@ -157,7 +157,7 @@ function showGameOver(targetWord, guessCount, shouldPost) {
     const bestRankedForShare = guesses
       .filter(g => g.rank && g.rank > 0)
       .sort((a, b) => a.rank - b.rank)[0];
-    const bestText = bestRankedForShare ? ' | Best rank: #' + bestRankedForShare.rank : '';
+    const bestText = bestRankedForShare ? '\nBest rank: #' + bestRankedForShare.rank : '';
     const shareText = '**' + username + '** solved today\'s Semantle in ' + guessCount + ' guesses' + bestText;
     fetch('/game/complete', {
       method: 'POST',

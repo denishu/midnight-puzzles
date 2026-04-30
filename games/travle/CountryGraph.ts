@@ -236,4 +236,55 @@ export class CountryGraph {
     if (costTo === -1 || costFrom === -1) return -1;
     return costTo + costFrom;
   }
+
+  /**
+   * Find the cheapest path from start to end with a free set, returning the actual path.
+   * Uses 0-1 BFS with parent tracking.
+   */
+  weightedShortestPath(start: string, end: string, freeSet: Set<string>): string[] | null {
+    const s = start.toLowerCase();
+    const e = end.toLowerCase();
+
+    if (!this.adjacency.has(s) || !this.adjacency.has(e)) return null;
+    if (s === e) return [s];
+
+    const dist = new Map<string, number>();
+    const parent = new Map<string, string>();
+    dist.set(s, 0);
+
+    const deque: string[] = [s];
+
+    while (deque.length > 0) {
+      const node = deque.shift()!;
+      const nodeDist = dist.get(node)!;
+
+      if (node === e) {
+        // Reconstruct path
+        const path: string[] = [e];
+        let current = e;
+        while (parent.has(current)) {
+          current = parent.get(current)!;
+          path.unshift(current);
+        }
+        return path;
+      }
+
+      for (const neighbor of this.getNeighbors(node)) {
+        const isFree = freeSet.has(neighbor) || neighbor === s || neighbor === e;
+        const newDist = nodeDist + (isFree ? 0 : 1);
+
+        if (!dist.has(neighbor) || newDist < dist.get(neighbor)!) {
+          dist.set(neighbor, newDist);
+          parent.set(neighbor, node);
+          if (isFree) {
+            deque.unshift(neighbor);
+          } else {
+            deque.push(neighbor);
+          }
+        }
+      }
+    }
+
+    return null;
+  }
 }

@@ -16,6 +16,7 @@ app.use(express.json());
 
 // --- Game setup ---
 let travleGame: TravleGame;
+let graph: CountryGraph;
 let sessionRepo: GameStateRepository;
 let userRepo: UserRepository;
 let configRepo: ConfigRepository;
@@ -35,9 +36,10 @@ async function initGame() {
   userRepo = new UserRepository(db);
   configRepo = new ConfigRepository(db);
 
-  const graph = new CountryGraph();
-  await graph.initialize();
-  travleGame = new TravleGame(graph);
+  const g = new CountryGraph();
+  await g.initialize();
+  graph = g;
+  travleGame = new TravleGame(g);
   travleGame.init();
   console.log('Travle game initialized');
 
@@ -209,6 +211,53 @@ app.post('/game/guess', async (req, res) => {
     guesses: state.guesses,
     guessesRemaining: state.guessesRemaining,
   });
+});
+
+// Get a hint: reveal an unguessed country on the cheapest path
+app.get('/game/hint', (req, res) => {
+  const sessionId = (req.query.id as string) || 'default';
+  const state = getSession(sessionId);
+
+  if (state.isComplete) {
+    res.json({ hint: null });
+    return;
+  }
+
+  const freeSet = new Set(state.guesses.map(g => g.country));
+  const path = graph.weightedShortestPath(state.puzzle.start, state.puzzle.end, freeSet);
+
+  if (!path) {
+    res.json({ hint: null });
+    return;
+  }
+
+  // Find unguessed countries on the path (exclude start and end)
+  const guessedSet = new Set([...freeSet, state.puzzle.start, state.puzzle.end]);
+  const unguessed = path.filter(c => !guessedSet.has(c));
+
+  if (unguessed.length === 0) {
+    res.json({ hint: null });
+    return;
+  }
+
+  // Pick the one closest to the last guess (or start if no guesses yet)
+  const lastGuess = state.guesses.length > 0
+    ? state.guesses[state.guesses.length - 1]!.country
+    : state.puzzle.start;
+
+  let closest = unguessed[0]!;
+  let closestDist = graph.shortestPathLength(lastGuess, closest);
+
+  for (const country of unguessed) {
+    const dist = graph.shortestPathLength(lastGuess, country);
+    if (dist >= 0 && (closestDist < 0 || dist < closestDist)) {
+      closest = country;
+      closestDist = dist;
+    }
+  }
+
+  console.log('[hint]', sessionId, '->', closest);
+  res.json({ hint: closest });
 });
 
 // Post results to Discord channel (uses the configured channel from /setchannel)

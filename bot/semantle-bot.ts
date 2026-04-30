@@ -206,12 +206,6 @@ export class SemantleBot extends BaseBotApplication {
     });
 
     this.commandRegistry.register({
-      name: 'reset',
-      description: 'Reset your current Semantle game (for testing)',
-      handler: this.handleResetCommand.bind(this)
-    });
-
-    this.commandRegistry.register({
       name: 'setchannel',
       description: 'Set this channel for daily puzzle messages (admin only)',
       handler: this.handleSetChannelCommand.bind(this)
@@ -352,16 +346,6 @@ export class SemantleBot extends BaseBotApplication {
       const errEmbed = EmbedBuilder.createError('Results unavailable', 'Could not retrieve your results.');
       await interaction.editReply({ embeds: [errEmbed] });
     }
-  }
-
-  private async handleResetCommand(interaction: any): Promise<void> {
-    const userId = interaction.user.id;
-    this.userSessions.delete(userId);
-    const dbSession = await this.sessionRepo.getActiveSession(userId, 'semantle', new Date());
-    if (dbSession) {
-      await this.sessionRepo.deleteSession(dbSession.id);
-    }
-    await interaction.reply({ content: '🔄 Game reset. Use `/play` to start fresh.', ephemeral: true });
   }
 
   private async handleHintCommand(interaction: any): Promise<void> {

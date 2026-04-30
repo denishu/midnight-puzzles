@@ -158,7 +158,6 @@ export class TravleBot extends BaseBotApplication {
     this.commandRegistry.register({ name: 'guess', description: 'Guess a country', options: [{ name: 'country', description: 'Country name', type: 'STRING', required: true }], handler: this.handleGuess.bind(this) });
     this.commandRegistry.register({ name: 'results', description: 'Share your Travle results', handler: this.handleResults.bind(this) });
     this.commandRegistry.register({ name: 'help', description: 'Learn how to play Travle', handler: this.handleHelp.bind(this) });
-    this.commandRegistry.register({ name: 'reset', description: 'Reset your current game (testing)', handler: this.handleReset.bind(this) });
     this.commandRegistry.register({ name: 'setchannel', description: 'Set this channel for daily puzzle messages (admin only)', handler: this.handleSetChannel.bind(this) });
   }
 
@@ -292,15 +291,6 @@ export class TravleBot extends BaseBotApplication {
       this.logger.error('Error in /results:', error);
       await interaction.editReply({ embeds: [EmbedBuilder.createError('Error', 'Could not get results.')] });
     }
-  }
-
-  private async handleReset(interaction: any): Promise<void> {
-    this.cache.delete(interaction.user.id);
-    const dbSession = await this.sessionRepo.getActiveSession(interaction.user.id, 'travle', new Date());
-    if (dbSession) {
-      await this.sessionRepo.deleteSession(dbSession.id);
-    }
-    await interaction.reply({ content: '🔄 Game reset. Use `/play` to start fresh.', ephemeral: true });
   }
 
   private async handleHelp(interaction: any): Promise<void> {

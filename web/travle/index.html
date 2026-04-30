@@ -68,6 +68,13 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #0a0e1a; color: 
 #submit-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(74, 222, 128, 0.35); }
 #submit-btn:active { transform: translateY(0); }
 #submit-btn:disabled { opacity: 0.3; cursor: default; transform: none; box-shadow: none; }
+#hint-btn {
+  padding: 12px 14px; border-radius: 10px; border: none;
+  background: rgba(74, 222, 128, 0.15); color: #4ade80;
+  font-size: 16px; cursor: pointer; transition: background 0.2s;
+}
+#hint-btn:hover { background: rgba(74, 222, 128, 0.25); }
+#hint-btn:disabled { opacity: 0.3; cursor: default; }
 
 /* Suggestions */
 #suggestions {
@@ -164,6 +171,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #0a0e1a; color: 
   <div id="input-area">
     <div id="input-row">
       <input id="guess-input" type="text" placeholder="Type a country..." autocomplete="off" />
+      <button id="hint-btn" title="Reveal a country outline">💡</button>
       <button id="submit-btn" disabled>Guess</button>
     </div>
     <div id="suggestions"></div>
