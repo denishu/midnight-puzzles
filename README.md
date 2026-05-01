@@ -1,201 +1,141 @@
-# Discord Puzzle Bot Suite
+# Midnight Puzzles
 
-A collection of three independent Discord bots for daily puzzle games:
-- **Semantle Bot**: Semantic word guessing game
-- **Travle Bot**: Country pathfinding game  
-- **Duotrigordle Bot**: 32 simultaneous Wordle puzzles
+A suite of three daily puzzle games for Discord, each playable through both slash commands and embedded Discord Activities (web UIs inside Discord).
 
-Each bot can be deployed independently, allowing servers to choose only the games they want.
+- **Semantle** — guess the secret word using semantic similarity scores
+- **Travle** — connect two countries by hopping through land borders
+- **Duotrigordle** — solve 32 Wordle puzzles simultaneously in 37 guesses
 
-## Three Independent Bots
+## How It Works
 
-### 🎯 Semantle Bot
-- Guess words using semantic similarity
-- Get ranked feedback for similar words
-- Commands: `/play`, `/guess <word>`, `/results`, `/help`
+Each game runs as two processes:
 
-### 🗺️ Travle Bot  
-- Find paths between countries using land borders
-- Geography-based puzzle solving
-- Commands: `/play`, `/guess <country>`, `/results`, `/help`
+1. **Discord Bot** — handles slash commands (`/play`, `/results`, `/help`, `/setchannel`), daily midnight recaps with server streaks, and puzzle announcements
+2. **Web Server** — serves the Activity UI (embedded in Discord via the Embedded App SDK), handles game logic via API endpoints, authenticates players via Discord OAuth
 
-### 📝 Duotrigordle Bot
-- Solve 32 Wordle puzzles simultaneously
-- Ultimate word puzzle challenge
-- Commands: `/play`, `/guess <word>`, `/results`, `/help`
+Players get the same daily puzzle. Completed games are saved to a shared database so the bot can post recaps at midnight UTC.
 
-## Shared Features
+## The Games
 
-- **Daily Puzzles**: New puzzles every day, consistent for all players
-- **Result Sharing**: Share results with spoiler protection  
-- **Independent Deployment**: Choose which games your server wants
-- **Shared Infrastructure**: All bots can use the same database
-- **Statistics**: Privacy-preserving usage analytics
+### 🦉 Semantle
+Guess the secret word — you get a similarity percentage and ranking instead of letter feedback. Words in the top 1000 most similar show their exact rank. Uses GloVe word vectors (100k words) for cosine similarity calculations.
+
+- Bot: `/play`, `/guess`, `/hint`, `/results`, `/help`, `/setchannel`
+- Activity: light purple theme, similarity bars, hint button, auto-post results on win
+
+### 🦊 Travle
+Connect two countries through their land borders in as few guesses as possible. Uses 0-1 BFS weighted pathfinding on a 196-country adjacency graph. Guesses are colored green (shortened path), yellow (nearby), or red (far).
+
+- Bot: `/play`, `/guess`, `/results`, `/help`, `/setchannel`
+- Activity: Leaflet map with country highlighting, autocomplete, auto-post results
+
+### 🐙 Duotrigordle
+32 simultaneous Wordle grids, 37 total guesses. Each guess applies to all grids at once with standard green/yellow/gray feedback. Gameplay is Activity-only — the grids are too large for Discord embeds.
+
+- Bot: `/play`, `/results`, `/help`, `/setchannel` (no `/guess` — Activity only)
+- Activity: 4×8 grid layout with letter overlays, QWERTY keyboard with cross-grid letter tracking, early loss detection with give-up option
 
 ## Project Structure
 
 ```
-discord-puzzle-bot-suite/
+midnight-puzzles/
+├── bot/                     # Discord bot processes (one per game)
+│   ├── shared/              # BaseBotApplication, command registry
+│   ├── semantle-bot.ts
+│   ├── travle-bot.ts
+│   └── duotrigordle-bot.ts
+├── web/                     # Web Activity frontends (one per game)
+│   ├── semantle/            # Express server (port 3001) + UI
+│   ├── travle/              # Express server (port 3002) + Leaflet map UI
+│   ├── duotrigordle/        # Express server (port 3003) + 32-grid UI
+│   ├── landing/             # Static landing page
+│   └── shared/              # Design tokens
+├── games/                   # Pure game logic (no Discord dependency)
+│   ├── semantle/            # SemanticEngine, SemantleGame, SimilarityCalculator
+│   ├── travle/              # CountryGraph, TravleGame, PuzzleGenerator
+│   └── duotrigordle/        # GridManager, WordValidator, ProgressTracker
 ├── core/                    # Shared infrastructure
-│   ├── discord/            # Discord API integration
-│   ├── storage/            # Data persistence layer
-│   ├── auth/               # User session management
-│   └── utils/              # Common utilities
-├── games/                  # Game-specific modules
-│   ├── semantle/           # Semantic word guessing
-│   ├── travle/             # Geography pathfinding
-│   └── duotrigordle/       # Multi-grid Wordle
-├── data/                   # Static game data
-│   ├── dictionaries/       # Word lists and semantic vectors
-│   ├── geography/          # Country adjacency data
-│   └── schemas/            # Data validation schemas
-├── bot/                    # Main Discord bot entry point
-└── tests/                  # Test suites
+│   ├── discord/             # EmbedBuilder, InteractionHandler, MessageFormatter
+│   ├── storage/             # Repositories, migrations, SQLite/PostgreSQL schemas
+│   ├── auth/                # SessionManager, GameSessionFactory
+│   └── utils/               # Logger, ErrorHandler, Validators
+├── data/                    # Static game data
+│   ├── dictionaries/        # GloVe vectors, word lists, proper noun blacklist
+│   └── geography/           # Country adjacency graph (196 countries)
+├── tests/                   # Jest unit tests (30 Duotrigordle + Semantle + Travle)
+├── scripts/                 # Utility scripts (deploy, check puzzles, word list tools)
+└── assets/                  # Logos and screenshots
 ```
 
 ## Setup
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+### Prerequisites
+- Node.js 18+
+- Three Discord applications (one per game) with Bot and Activity enabled
 
-2. **Configure environment:**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your Discord bot tokens for each game you want to deploy
-   # You need separate Discord applications for each bot
-   ```
+### Install and Configure
 
-3. **Set up database:**
-   ```bash
-   # For development (SQLite)
-   npm run migrate:dev
-   
-   # For production (PostgreSQL)
-   npm run migrate
-   ```
+```bash
+npm install
+cp .env.example .env
+# Fill in bot tokens, client IDs, and client secrets for each game
+```
 
-4. **Build the project:**
-   ```bash
-   npm run build
-   ```
+### Deploy Slash Commands (once per bot)
 
-5. **Deploy commands and start bots:**
-   ```bash
-   # Deploy slash commands (run once per bot)
-   npm run deploy:semantle
-   npm run deploy:travle  
-   npm run deploy:duotrigordle
-   
-   # Development (run individual bots)
-   npm run dev:semantle
-   npm run dev:travle
-   npm run dev:duotrigordle
-   
-   # Production (run individual bots)
-   npm run start:semantle
-   npm run start:travle
-   npm run start:duotrigordle
-   ```
+```bash
+npm run deploy:semantle
+npm run deploy:travle
+npm run deploy:duotrigordle
+```
 
-## Development
+### Run in Development
 
-- **Run tests:** `npm test`
-- **Watch tests:** `npm run test:watch`
-- **Coverage:** `npm run test:coverage`
-- **Lint:** `npm run lint`
-- **Type check:** `npm run build`
+```bash
+# Bots (slash commands + daily cron)
+npm run dev:semantle
+npm run dev:travle
+npm run dev:duotrigordle
 
-## Testing
+# Web Activities
+npm run dev:semantle-web     # port 3001
+npm run dev:travle-web       # port 3002
+npm run dev:duotrigordle-web # port 3003
+```
 
-The project uses a dual testing approach:
+For Activities to work inside Discord, you need a tunnel (e.g., `cloudflared`) pointing to each web server, with the URL mapped in the Discord dev portal under Activities.
 
-- **Unit Tests**: Specific examples and edge cases using Jest
-- **Property-Based Tests**: Universal properties using fast-check
-- **Integration Tests**: End-to-end game flows
+### Run Tests
 
-Property-based tests run 100+ iterations to ensure statistical confidence and are tagged with their corresponding design document properties.
+```bash
+npm test              # run all tests
+npm run test:watch    # watch mode
+npm run test:coverage # with coverage
+```
+
+## Environment Variables
+
+See `.env.example` for the full list. Each game needs:
+- `<GAME>_BOT_TOKEN` — Discord bot token
+- `<GAME>_CLIENT_ID` — Discord application/client ID
+- `<GAME>_CLIENT_SECRET` — Discord OAuth2 client secret
 
 ## Database
 
-Supports both SQLite (development) and PostgreSQL (production):
+SQLite for development (auto-created `.db` files), PostgreSQL for production. One database per game containing all servers and users. The bot and web server for the same game share the same database.
 
-- **SQLite**: Simple file-based database for local development
-- **PostgreSQL**: Production-ready with connection pooling and transactions
-- **Migrations**: Automatic schema management and updates
+## Daily Flow
 
-## Discord Bot Setup
+At midnight UTC, each bot:
+1. Queries yesterday's completed games from the database
+2. Posts a recap embed per server with player scores and server streak
+3. Announces the new daily puzzle
+4. Cleans up old sessions (7 days)
 
-### Creating Discord Applications
+## Tech Stack
 
-You need to create separate Discord applications for each bot:
-
-1. Go to https://discord.com/developers/applications
-2. Create three applications:
-   - "Semantle" - Word similarity game
-   - "Travle" - Geography pathfinding game  
-   - "Duotrigordle" - Multi-Wordle challenge
-3. For each application:
-   - Go to "Bot" section
-   - Create a bot and copy the token
-   - Copy the Application ID from "General Information"
-4. Add tokens to your `.env` file
-
-### Bot Permissions
-
-Each bot needs these Discord permissions:
-- Send Messages
-- Use Slash Commands  
-- Send Messages in Threads
-- Embed Links
-- Add Reactions
-
-### Inviting Bots to Servers
-
-Generate invite links for each bot with the required permissions. Server admins can choose which games to add to their servers.
-
-## Deployment Options
-
-### Single Server (All Bots)
-Run all three bots on the same server with shared database:
-```bash
-npm run start:semantle &
-npm run start:travle &  
-npm run start:duotrigordle &
-```
-
-### Separate Deployment
-Deploy each bot independently on different servers or containers.
-
-### Docker Support
-
-**All bots with shared database:**
-```bash
-# Copy environment file and configure tokens
-cp .env.example .env
-# Edit .env with your bot tokens
-
-# Start all services
-docker-compose up -d
-```
-
-**Individual bot containers:**
-```bash
-# Build individual bot images
-docker build -f Dockerfile.semantle -t semantle-bot .
-docker build -f Dockerfile.travle -t travle-bot .
-docker build -f Dockerfile.duotrigordle -t duotrigordle-bot .
-
-# Run individual bots
-docker run -d --env-file .env semantle-bot
-docker run -d --env-file .env travle-bot
-docker run -d --env-file .env duotrigordle-bot
-```
+TypeScript, Discord.js, Express, SQLite/PostgreSQL, Jest, Leaflet (Travle maps), Discord Embedded App SDK
 
 ## License
 
-MIT License - see LICENSE file for details.
-
----
-*Built with TypeScript and Discord.js* ✨
+MIT
