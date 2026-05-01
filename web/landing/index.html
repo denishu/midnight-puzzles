@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Midnight Puzzles</title>
+<link rel="icon" type="image/png" href="../../assets/midnight_puzzles_logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&family=Quicksand:wght@600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <img src="../../assets/midnight_puzzles_logo.png" alt="Midnight Puzzles" class="header-logo">
+      <span class="header-title">Midnight Puzzles</span>
+    </div>
+    <nav class="header-nav">
+      <a href="#bots">Our Bots</a>
+      <a href="#about">About Us</a>
+      <a href="https://github.com/denishu/midnight-puzzles" target="_blank" rel="noreferrer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+        GitHub
+      </a>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-inner">
+    <div class="hero-badge">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+      <span>The secret game lounge is open</span>
+    </div>
+    <h1>Cozy puzzles for <br><span class="gradient-text">late night gaming.</span></h1>
+    <p class="hero-sub">We bring favorite browser puzzles into your Discord server, so your friends can play together without ever leaving chat.</p>
+    <div class="hero-buttons">
+      <a href="#bots" class="btn btn-primary btn-lg">Meet the Bots</a>
+    </div>
+  </div>
+</section>
+
+<!-- BOTS SHOWCASE -->
+<section id="bots" class="bots-section">
+  <div class="section-inner">
+    <div class="section-header">
+      <h2>Choose Your Companion</h2>
+      <p>Three nocturnal friends ready to bring games to your server.</p>
+    </div>
+
+    <div class="bots-list">
+      <!-- Semantle -->
+      <div class="bot-card">
+        <div class="bot-avatar-wrap">
+          <div class="bot-glow glow-primary"></div>
+          <img src="../../assets/semantle_logo.png" alt="Semantle Avatar" class="bot-avatar">
+        </div>
+        <div class="bot-info">
+          <span class="bot-tag tag-secondary">Semantic Word Hunt</span>
+          <h3>Semantle</h3>
+          <p>Guess the secret word — but you only get a similarity score, not letters. A daily semantic word puzzle that turns vocabulary into a satisfying hunt. Watch your guesses warm up as you inch toward the answer one word at a time.</p>
+          <div class="bot-buttons">
+            <a href="#" class="btn btn-primary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              Add to Discord
+            </a>
+            <button class="btn btn-outline" onclick="openPreview('../../assets/semantle.png', 'Semantle')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              Preview
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Travle -->
+      <div class="bot-card reversed">
+        <div class="bot-avatar-wrap">
+          <div class="bot-glow glow-accent"></div>
+          <img src="../../assets/travle_logo.png" alt="Travle Avatar" class="bot-avatar">
+        </div>
+        <div class="bot-info">
+          <span class="bot-tag tag-accent">Country Connection Game</span>
+          <h3>Travle</h3>
+          <p>Connect two distant countries by hopping through their neighbors in as few steps as possible. A daily geography ritual for the slightly competitive — sharpen your map sense without ever leaving Discord.</p>
+          <div class="bot-buttons">
+            <a href="#" class="btn btn-primary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              Add to Discord
+            </a>
+            <button class="btn btn-outline" onclick="openPreview('../../assets/travle.png', 'Travle')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              Preview
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Duotrigordle -->
+      <div class="bot-card">
+        <div class="bot-avatar-wrap">
+          <div class="bot-glow glow-secondary"></div>
+          <img src="../../assets/duotrigordle_logo.png" alt="Duotrigordle Avatar" class="bot-avatar">
+        </div>
+        <div class="bot-info">
+          <span class="bot-tag tag-primary">32 Wordles, 37 Guesses</span>
+          <h3>Duotrigordle</h3>
+          <p>Thirty-two simultaneous Wordle boards. Thirty-seven total guesses. The most ridiculous, glorious word puzzle challenge you can attempt inside Discord — perfect for late-night brain workouts.</p>
+          <div class="bot-buttons">
+            <a href="#" class="btn btn-primary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              Add to Discord
+            </a>
+            <button class="btn btn-outline" onclick="openPreview('../../assets/duotrigordle.png', 'Duotrigordle')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              Preview
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about" class="about-section">
+  <div class="section-inner">
+    <div class="about-icon">🎮</div>
+    <h2>Built for Cozy Communities</h2>
+    <p class="about-desc">Midnight Puzzles is a small hobby collective dedicated to making Discord servers feel more alive. We take the daily browser puzzles we already love and rebuild them as bots that play nicely with chat — so your friends can solve together late at night, without another tab to babysit.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon icon-primary">🧩</div>
+        <h4>Open Source</h4>
+        <p>All our bots are completely open-source. Host them yourself or contribute to the magic on GitHub.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon icon-accent">💬</div>
+        <h4>Chat-Native</h4>
+        <p>Designed specifically for Discord's interface using buttons, selects, and clean embed messages.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon icon-secondary">✨</div>
+        <h4>Community Driven</h4>
+        <p>Daily puzzles, server streaks, and shared leaderboards keep your Discord active and give everyone something to look forward to.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <img src="../../assets/midnight_puzzles_logo.png" alt="Midnight Puzzles" class="footer-logo">
+      <span>Midnight Puzzles</span>
+    </div>
+    <div class="footer-links">
+      <a href="https://github.com/denishu/midnight-puzzles" target="_blank" rel="noreferrer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+        Monorepo
+      </a>
+      <span class="footer-sep">|</span>
+      <span>Built for late nights.</span>
+    </div>
+  </div>
+</footer>
+
+<!-- LIGHTBOX -->
+<div id="lightbox" class="lightbox" onclick="closePreview()">
+  <div class="lightbox-content" onclick="event.stopPropagation()">
+    <button class="lightbox-close" onclick="closePreview()">✕</button>
+    <h3 id="lightbox-title"></h3>
+    <img id="lightbox-img" src="" alt="Preview">
+  </div>
+</div>
+
+<script>
+function openPreview(src, title) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox-title').textContent = title;
+  document.getElementById('lightbox').classList.add('active');
+}
+function closePreview() {
+  document.getElementById('lightbox').classList.remove('active');
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closePreview();
+});
+</script>
+
+</body>
+</html>

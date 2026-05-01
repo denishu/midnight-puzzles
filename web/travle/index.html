@@ -49,9 +49,9 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #0a0e1a; color: 
 
 /* Input */
 #input-area { padding: 16px 20px; border-bottom: 1px solid rgba(59, 130, 246, 0.1); position: relative; overflow: visible; }
-#input-row { display: flex; gap: 8px; }
+#input-row { display: flex; gap: 8px; min-width: 0; }
 #guess-input {
-  flex: 1; padding: 12px 14px; border-radius: 10px;
+  flex: 1; min-width: 0; padding: 12px 14px; border-radius: 10px;
   border: 1px solid rgba(59, 130, 246, 0.2); background: rgba(15, 23, 42, 0.6);
   color: #f1f5f9; font-size: 14px; font-family: 'Inter', system-ui, sans-serif;
   outline: none; transition: border-color 0.2s, box-shadow 0.2s;
@@ -59,7 +59,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #0a0e1a; color: 
 #guess-input:focus { border-color: rgba(74, 222, 128, 0.5); box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.1); }
 #guess-input::placeholder { color: #475569; }
 #submit-btn {
-  padding: 12px 20px; border-radius: 10px; border: none;
+  padding: 12px 20px; border-radius: 10px; border: none; flex-shrink: 0;
   background: linear-gradient(135deg, #4ade80, #22c55e); color: #052e16;
   font-weight: 700; font-size: 13px; cursor: pointer; letter-spacing: 0.03em;
   text-transform: uppercase; transition: transform 0.1s, box-shadow 0.2s;
