@@ -89,14 +89,14 @@ function getTemp(rank, similarity) {
   if (rank && rank <= 10) return 'hot';
   if (rank && rank <= 100) return 'warm';
   if (rank && rank <= 1000) return 'ranked';
-  if (similarity >= 0.16) return 'tepid';
+  if (similarity >= 0.25) return 'tepid';
   return 'cold';
 }
 
 function getRankText(rank, similarity) {
   if (rank === 0) return '🎯 FOUND';
   if (rank) return '#' + rank;
-  if (similarity >= 0.16) return '🌊 Tepid';
+  if (similarity >= 0.25) return '🌊 Tepid';
   return '❄️ Cold';
 }
 

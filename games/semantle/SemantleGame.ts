@@ -224,7 +224,7 @@ export class SemantleGame implements Game {
       }
     } else {
       // Word is not in top 1000
-      if (similarity < 0.16) {
+      if (similarity < 0.25) {
         feedback = `❄️ Cold (${(similarity * 100).toFixed(2)}%)`;
       } else {
         feedback = `🌊 Tepid (${(similarity * 100).toFixed(2)}%)`;
