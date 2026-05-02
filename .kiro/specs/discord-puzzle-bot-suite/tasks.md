@@ -110,13 +110,13 @@
   - Grid completion tracking
   - Win/loss conditions
 
-- [ ] 17. Travle hint feature
+- [x] 17. Travle hint feature
   - Add /game/hint endpoint: compute cheapest path with current guesses, return one unguessed country closest to the player's last guess
   - Add 💡 button to Travle UI (same pattern as Semantle)
   - Reveal the hint country's outline on the map (no tooltip, no name — just the shape with a subtle border)
   - Player must still identify the country by its shape
 
-- [ ] 18. Semantle improvements (polish)
+- [x] 18. Semantle improvements (polish)
   - Precompute similarity rankings per target word (Option 3 hybrid approach)
   - Store vectors in binary Float32Array format for fast loading
   - Expand proper noun blacklist (US states, cities, common names)
@@ -130,7 +130,7 @@
   - Persistent tunnel or custom domain setup
   - Environment variable management for production
 
-- [ ] 19. Landing page
+- [x] 19. Landing page
   - Static webpage at web/landing/ with logos, descriptions, install links
   - Host on GitHub Pages or alongside the bots
 
