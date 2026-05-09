@@ -229,9 +229,9 @@ app.post('/game/complete', async (req, res) => {
       },
       body: JSON.stringify({
         embeds: [{
-          title: '🔤 Semantle Results',
+          title: '🔮 Semantle Results',
           description: message,
-          color: 0xa855f7,
+          color: 0x9932cc,
         }],
       }),
     });

@@ -269,9 +269,9 @@ app.post('/game/complete', async (req, res) => {
       },
       body: JSON.stringify({
         embeds: [{
-          title: '📝 Duotrigordle Results',
+          title: '🟧 Duotrigordle Results',
           description: message,
-          color: 0x22c55e,
+          color: 0xff6b35,
         }],
       }),
     });

@@ -264,7 +264,7 @@ function showGameOver(isWin, feedback, winningPath) {
   const score = isWin ? (over <= 0 ? '✨ Perfect' : '+' + over) : '❌ DNF';
   const user = getDiscordUser();
   const username = user ? user.username : 'Someone';
-  const shareText = '**' + username + '** — ' + score + '\n🧭 ' + titleCase(puzzle.start) + ' → ' + titleCase(puzzle.end) + ' (' + guesses.length + ' guesses)\n' + colors;
+  const shareText = '**' + username + '** — ' + score + '\n' + titleCase(puzzle.start).toUpperCase() + ' → ' + titleCase(puzzle.end).toUpperCase() + ' (' + guesses.length + ' guesses)\n\n' + colors;
 
   const shareEl = document.getElementById('go-share');
   if (shareEl) {

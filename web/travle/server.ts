@@ -290,9 +290,9 @@ app.post('/game/complete', async (req, res) => {
       },
       body: JSON.stringify({
         embeds: [{
-          title: '🌍 Travle Results',
+          title: '🧭 Travle Results',
           description: message,
-          color: 0x4ade80, // green accent
+          color: 0x00aa55, // match bot embed color
         }]
       })
     });

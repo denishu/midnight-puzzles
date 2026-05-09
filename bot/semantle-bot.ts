@@ -140,7 +140,7 @@ export class SemantleBot extends BaseBotApplication {
           await this.configRepo.updateStreak(guild.id, 'semantle', newCount, yesterdayStr);
 
           // Build recap embed
-          const recapEmbed = EmbedBuilder.createGameEmbed('semantle', '🔤 Yesterday\'s Semantle Recap');
+          const recapEmbed = EmbedBuilder.createGameEmbed('semantle', '🔮 Yesterday\'s Semantle Recap');
           const lines = serverSessions.map(s => {
             const guessCount = s.attempts || s.gameData?.guesses?.length || '?';
             const won = s.isComplete;
@@ -157,8 +157,8 @@ export class SemantleBot extends BaseBotApplication {
         }
 
         // --- Today's new puzzle ---
-        const newEmbed = EmbedBuilder.createGameEmbed('semantle', '🔤 New Semantle Puzzle!');
-        newEmbed.setDescription('A new word is waiting to be discovered!\n\nUse `/play` to start guessing.');
+        const newEmbed = EmbedBuilder.createGameEmbed('semantle', '🔮 New Semantle Puzzle!');
+        newEmbed.setDescription('A new word is waiting to be discovered!\n\nUse `/play` or launch the Activity to start guessing.');
         await (channel as any).send({ embeds: [newEmbed] });
       }
 
@@ -289,11 +289,9 @@ export class SemantleBot extends BaseBotApplication {
 
         // Auto-post public results
         const session = gameState.session;
-        const resultsEmbed = EmbedBuilder.createGameEmbed('semantle', '🔤 Semantle Results');
-        resultsEmbed.setDescription(`**${interaction.user.username}** solved today's Semantle in **${session.attempts}** guesses!`);
-        if (session.gameData.bestRank) {
-          resultsEmbed.addFields({ name: 'Best Rank', value: `#${session.gameData.bestRank}`, inline: true });
-        }
+        const resultsEmbed = EmbedBuilder.createGameEmbed('semantle', '🔮 Semantle Results');
+        const bestRankText = session.gameData.bestRank ? `\nBest rank: #${session.gameData.bestRank}` : '';
+        resultsEmbed.setDescription(`**${interaction.user.username}** solved today's Semantle in **${session.attempts}** guesses!${bestRankText}`);
         await interaction.followUp({ embeds: [resultsEmbed], ephemeral: false });
       } else {
         // Ongoing — show feedback + recent guesses
@@ -331,7 +329,7 @@ export class SemantleBot extends BaseBotApplication {
         return;
       }
 
-      const embed = EmbedBuilder.createGameEmbed('semantle', '🔤 Semantle Results');
+      const embed = EmbedBuilder.createGameEmbed('semantle', '🔮 Semantle Results');
       embed.setDescription(`**${interaction.user.username}** solved today's Semantle in **${session.attempts}** guesses!`);
       if (session.gameData.bestRank) {
         embed.addFields(
@@ -366,7 +364,7 @@ export class SemantleBot extends BaseBotApplication {
         return;
       }
 
-      const embed = EmbedBuilder.createGameEmbed('semantle', '💡 Hint');
+      const embed = EmbedBuilder.createGameEmbed('semantle', '🔮 Hint');
       embed.setDescription(`Try the word **${hint.word}** (rank #${hint.rank})`);
       await interaction.editReply({ embeds: [embed] });
     } catch (error) {

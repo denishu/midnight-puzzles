@@ -140,8 +140,7 @@ export class TravleBot extends BaseBotApplication {
         // --- Today's new puzzle ---
         const newEmbed = EmbedBuilder.createGameEmbed('travle', '🧭 New Travle Puzzle!');
         newEmbed.setDescription(
-          'Connect **' + puzzle.start.toUpperCase() + '** to **' + puzzle.end.toUpperCase() + '**\n\n' +
-          'Find a path through ' + (puzzle.shortestPathLength - 1) + ' countries. You have ' + puzzle.maxGuesses + ' guesses.\n\n' +
+          'A new path is waiting to be found!\n\n' +
           'Use `/play` or launch the Activity to start!'
         );
         await (channel as any).send({ embeds: [newEmbed] });
@@ -215,7 +214,7 @@ export class TravleBot extends BaseBotApplication {
       await this.userRepo.upsertUser(interaction.user.id, interaction.user.username);
       const state = await this.getSession(interaction.user.id, interaction.guildId ?? 'dm');
       const pz = state.puzzle;
-      const embed = EmbedBuilder.createGameEmbed('travle', '🌍 Travle - Connect the Countries!');
+      const embed = EmbedBuilder.createGameEmbed('travle', '🧭 Travle - Connect the Countries!');
       if (state.isComplete) {
         embed.setDescription(state.isWin
           ? 'You already solved today\'s puzzle in ' + state.guesses.length + ' guesses!'
@@ -248,7 +247,7 @@ export class TravleBot extends BaseBotApplication {
       await this.saveState(interaction.user.id, state);
 
       const icon = result.status === 'green' ? '🟩' : result.status === 'yellow' ? '🟨' : result.status === 'red' ? '🟥' : '❌';
-      const embed = EmbedBuilder.createGameEmbed('travle', '🌍 Travle');
+      const embed = EmbedBuilder.createGameEmbed('travle', '🧭 Travle');
       embed.setDescription(icon + ' ' + result.feedback);
       embed.addFields(
         { name: 'Start → End', value: state.puzzle.start.toUpperCase() + ' → ' + state.puzzle.end.toUpperCase(), inline: false },
@@ -264,7 +263,7 @@ export class TravleBot extends BaseBotApplication {
         const colors = state.guesses.map((g: { status: string }) => g.status === 'green' ? '🟩' : g.status === 'yellow' ? '🟨' : '🟥').join('');
         const over = state.guesses.length - (pz.shortestPathLength - 1);
         const score = over <= 0 ? 'Perfect!' : '+' + over;
-        const rEmbed = EmbedBuilder.createGameEmbed('travle', '🌍 Travle Results');
+        const rEmbed = EmbedBuilder.createGameEmbed('travle', '🧭 Travle Results');
         rEmbed.setDescription('**' + interaction.user.username + '** — ' + score + '\n' + pz.start.toUpperCase() + ' → ' + pz.end.toUpperCase() + ' (' + state.guesses.length + ' guesses)\n\n' + colors);
         await interaction.followUp({ embeds: [rEmbed], ephemeral: false });
       }
@@ -284,7 +283,7 @@ export class TravleBot extends BaseBotApplication {
       const colors = state.guesses.map((g: { status: string }) => g.status === 'green' ? '🟩' : g.status === 'yellow' ? '🟨' : '🟥').join('');
       const over = state.guesses.length - (pz.shortestPathLength - 1);
       const score = state.isWin ? (over <= 0 ? 'Perfect!' : '+' + over) : 'DNF';
-      const embed = EmbedBuilder.createGameEmbed('travle', '🌍 Travle Results');
+      const embed = EmbedBuilder.createGameEmbed('travle', '🧭 Travle Results');
       embed.setDescription('**' + interaction.user.username + '** — ' + score + '\n' + pz.start.toUpperCase() + ' → ' + pz.end.toUpperCase() + ' (' + state.guesses.length + ' guesses)\n\n' + colors);
       await interaction.editReply({ embeds: [embed] });
     } catch (error) {

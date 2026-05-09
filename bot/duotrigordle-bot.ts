@@ -125,7 +125,7 @@ export class DuotrigordleBot extends BaseBotApplication {
           await this.configRepo.updateStreak(guild.id, 'duotrigordle', newCount, yesterdayStr);
 
           // Build recap embed
-          const recapEmbed = EmbedBuilder.createGameEmbed('duotrigordle', '📝 Yesterday\'s Duotrigordle Recap');
+          const recapEmbed = EmbedBuilder.createGameEmbed('duotrigordle', '🟧 Yesterday\'s Duotrigordle Recap');
           const lines = serverSessions.map(s => {
             const gridsCompleted = s.result?.gridsCompleted ?? s.gameData?.gridsCompleted ?? 0;
             const guessesUsed = s.result?.guessesUsed ?? s.attempts ?? '?';
@@ -145,9 +145,9 @@ export class DuotrigordleBot extends BaseBotApplication {
         }
 
         // --- Today's new puzzle ---
-        const newEmbed = EmbedBuilder.createGameEmbed('duotrigordle', '📝 New Duotrigordle Puzzle!');
+        const newEmbed = EmbedBuilder.createGameEmbed('duotrigordle', '🟧 New Duotrigordle Puzzle!');
         newEmbed.setDescription(
-          `${GRID_COUNT} words to solve in ${MAX_GUESSES} guesses!\n\n` +
+          '32 words to solve!\n\n' +
           'Launch the Activity to play today\'s puzzle. Use `/play` for details.'
         );
         await (channel as any).send({ embeds: [newEmbed] });
@@ -197,7 +197,7 @@ export class DuotrigordleBot extends BaseBotApplication {
         const gridsCompleted = dbSession.result?.gridsCompleted ?? dbSession.gameData?.gridsCompleted ?? 0;
         const guessesUsed = dbSession.result?.guessesUsed ?? dbSession.attempts ?? '?';
         const won = dbSession.result?.isWin;
-        const embed = EmbedBuilder.createGameEmbed('duotrigordle', '📝 Duotrigordle');
+        const embed = EmbedBuilder.createGameEmbed('duotrigordle', '🟧 Duotrigordle');
         embed.setDescription(
           won
             ? `You already solved today's puzzle! ✅\n\n${gridsCompleted}/${GRID_COUNT} grids in ${guessesUsed}/${MAX_GUESSES} guesses.`
@@ -209,7 +209,7 @@ export class DuotrigordleBot extends BaseBotApplication {
 
       // Generate today's puzzle info for the teaser
       const puzzle = GridManager.generateDailyPuzzle(new Date(), this.validator);
-      const embed = EmbedBuilder.createGameEmbed('duotrigordle', '📝 Duotrigordle — Today\'s Puzzle');
+      const embed = EmbedBuilder.createGameEmbed('duotrigordle', '🟧 Duotrigordle — Today\'s Puzzle');
       embed.setDescription(
         `**${GRID_COUNT} words** to solve in **${MAX_GUESSES} guesses**!\n\n` +
         'Duotrigordle is played through the Discord Activity.\n' +
@@ -245,7 +245,7 @@ export class DuotrigordleBot extends BaseBotApplication {
       const guessesUsed = dbSession.result?.guessesUsed ?? dbSession.attempts ?? '?';
       const won = dbSession.result?.isWin;
 
-      const embed = EmbedBuilder.createGameEmbed('duotrigordle', '📝 Duotrigordle Results');
+      const embed = EmbedBuilder.createGameEmbed('duotrigordle', '🟧 Duotrigordle Results');
       const score = won
         ? `✅ Solved ${gridsCompleted}/${GRID_COUNT} in ${guessesUsed}/${MAX_GUESSES} guesses`
         : `${gridsCompleted}/${GRID_COUNT} grids (${guessesUsed}/${MAX_GUESSES} guesses)`;

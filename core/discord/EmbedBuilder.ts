@@ -74,7 +74,7 @@ export class EmbedBuilder {
     guesses: Array<{ word: string; rank?: number; similarity: number }>,
     isComplete: boolean = false
   ): DiscordEmbedBuilder {
-    const embed = this.createGameEmbed('semantle', '🔤 Semantle - Word Similarity Game');
+    const embed = this.createGameEmbed('semantle', '🔮 Semantle - Word Similarity Game');
 
     if (isComplete && targetWord) {
       embed.setDescription(`🎉 Congratulations! The word was **${targetWord.toUpperCase()}**`);
@@ -121,7 +121,7 @@ export class EmbedBuilder {
     remainingAttempts: number,
     isComplete: boolean = false
   ): DiscordEmbedBuilder {
-    const embed = this.createGameEmbed('travle', '🌍 Travle - Country Path Game');
+    const embed = this.createGameEmbed('travle', '🧭 Travle - Country Path Game');
 
     if (isComplete) {
       embed.setDescription(`🎉 Success! You connected **${startCountry}** to **${endCountry}**!`);
@@ -157,7 +157,7 @@ export class EmbedBuilder {
     totalGrids: number,
     remainingAttempts: number
   ): DiscordEmbedBuilder {
-    const embed = this.createGameEmbed('duotrigordle', '📝 Duotrigordle - 32 Wordle Grids');
+    const embed = this.createGameEmbed('duotrigordle', '🟧 Duotrigordle - 32 Wordle Grids');
 
     const progress = (completedGrids / totalGrids * 100).toFixed(1);
     embed.setDescription(`Solve all 32 Wordle puzzles! Progress: ${completedGrids}/${totalGrids} (${progress}%)`);
