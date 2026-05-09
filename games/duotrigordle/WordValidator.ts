@@ -16,8 +16,8 @@ export class WordValidator {
    * @param guessesPath path to wordle-valid-guesses.txt
    */
   loadWordLists(
-    answersPath: string = path.join(__dirname, '../../data/dictionaries/wordle-answers.txt'),
-    guessesPath: string = path.join(__dirname, '../../data/dictionaries/wordle-valid-guesses.txt'),
+    answersPath: string = path.join(process.cwd(), 'data/dictionaries/wordle-answers.txt'),
+    guessesPath: string = path.join(process.cwd(), 'data/dictionaries/wordle-valid-guesses.txt'),
   ): void {
     const readWords = (filePath: string): string[] =>
       fs.readFileSync(filePath, 'utf-8')

@@ -16,7 +16,7 @@ export interface SemanticData {
 }
 
 const VECTOR_DIM = 300;
-const DICT_DIR = path.join(__dirname, '../../data/dictionaries');
+const DICT_DIR = path.join(process.cwd(), 'data/dictionaries');
 
 /**
  * Semantic engine for calculating word similarity in Semantle.

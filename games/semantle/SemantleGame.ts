@@ -52,8 +52,8 @@ export class SemantleGame implements Game {
 
   private loadTargetWords(): void {
     // Try new curated 840B target list first, fall back to old list
-    const newPath = path.join(__dirname, '../../data/dictionaries/target-words-840b.txt');
-    const oldPath = path.join(__dirname, '../../data/dictionaries/target-words.txt');
+    const newPath = path.join(process.cwd(), 'data/dictionaries/target-words-840b.txt');
+    const oldPath = path.join(process.cwd(), 'data/dictionaries/target-words.txt');
     const filePath = fs.existsSync(newPath) ? newPath : oldPath;
     try {
       const content = fs.readFileSync(filePath, 'utf-8');

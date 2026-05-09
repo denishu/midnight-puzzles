@@ -51,7 +51,7 @@ export class CountryGraph {
 
   /** Load adjacency data from JSON file */
   async initialize(dataPath?: string): Promise<void> {
-    const filePath = dataPath || path.join(__dirname, '../../data/geography/country-adjacency.json');
+    const filePath = dataPath || path.join(process.cwd(), 'data/geography/country-adjacency.json');
     const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 
     for (const [country, neighbors] of Object.entries(raw)) {
