@@ -35,8 +35,12 @@
     "games/**/*",
     "data/**/*",
     "bot/**/*",
-    "tests/**/*"
-, "scripts/semantle/test-semantle.ts", "scripts/semantle/vocabulary-explorer.ts", "scripts/semantle/vocabulary-explorer-unfiltered.ts"  ],
+    "web/**/*.ts",
+    "tests/**/*",
+    "scripts/semantle/test-semantle.ts",
+    "scripts/semantle/vocabulary-explorer.ts",
+    "scripts/semantle/vocabulary-explorer-unfiltered.ts"
+  ],
   "exclude": [
     "node_modules",
     "dist",
