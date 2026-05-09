@@ -17,19 +17,19 @@ Players get the same daily puzzle. Completed games are saved to a shared databas
 
 ## The Games
 
-### 🦉 Semantle
+### 🔮 Semantle
 Guess the secret word — you get a similarity percentage and ranking instead of letter feedback. Words in the top 1000 most similar show their exact rank. Uses GloVe word vectors (100k words) for cosine similarity calculations.
 
 - Bot: `/play`, `/guess`, `/hint`, `/results`, `/help`, `/setchannel`
 - Activity: light purple theme, similarity bars, hint button, auto-post results on win
 
-### 🦊 Travle
+### 🧭 Travle
 Connect two countries through their land borders in as few guesses as possible. Uses 0-1 BFS weighted pathfinding on a 196-country adjacency graph. Guesses are colored green (shortened path), yellow (nearby), or red (far).
 
 - Bot: `/play`, `/guess`, `/results`, `/help`, `/setchannel`
 - Activity: Leaflet map with country highlighting, autocomplete, auto-post results
 
-### 🐙 Duotrigordle
+### 🟧 Duotrigordle
 32 simultaneous Wordle grids, 37 total guesses. Each guess applies to all grids at once with standard green/yellow/gray feedback. Gameplay is Activity-only — the grids are too large for Discord embeds.
 
 - Bot: `/play`, `/results`, `/help`, `/setchannel` (no `/guess` — Activity only)
