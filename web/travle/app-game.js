@@ -191,7 +191,7 @@ async function submitGuess() {
   const resp = await fetch('/game/guess' + getSessionParam(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ country })
+    body: JSON.stringify({ country, username: getDiscordUser()?.username })
   });
   const result = await resp.json();
 

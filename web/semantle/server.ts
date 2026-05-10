@@ -66,7 +66,7 @@ function scheduleDailyCleanup() {
   console.log(`[cleanup] Next session purge in ${Math.round(msUntilMidnight / 60000)} minutes`);
 }
 
-async function getOrCreateSession(userId: string): Promise<string> {
+async function getOrCreateSession(userId: string, username?: string): Promise<string> {
   // Date rollover check
   const today = new Date().toISOString().split('T')[0]!;
   if (today !== sessionsDate) {
@@ -78,7 +78,7 @@ async function getOrCreateSession(userId: string): Promise<string> {
   if (sessionId) return sessionId;
 
   // Ensure user exists
-  await userRepo.upsertUser(userId, 'activity_user_' + userId);
+  await userRepo.upsertUser(userId, username || 'activity_user_' + userId);
 
   const session = await semantleGame.startSession(userId, 'activity');
   userSessions.set(userId, session.id);
@@ -130,10 +130,11 @@ app.post('/game/discord/token', async (req, res) => {
 // Get current game state
 app.get('/game/state', async (req, res) => {
   const userId = (req.query.id as string) || 'default';
+  const username = req.query.username as string | undefined;
   console.log('[session] state request from:', userId);
 
   try {
-    const sessionId = await getOrCreateSession(userId);
+    const sessionId = await getOrCreateSession(userId, username);
     const gameState = await semantleGame.getGameState(sessionId);
     const session = gameState.session;
     const guesses = (session.gameData.guesses || []).map((g: any) => ({
@@ -163,12 +164,12 @@ app.get('/game/state', async (req, res) => {
 // Submit a guess
 app.post('/game/guess', async (req, res) => {
   const userId = (req.query.id as string) || 'default';
-  const { word } = req.body;
+  const { word, username } = req.body;
   console.log('[guess]', userId, word);
   if (!word) { res.status(400).json({ error: 'word required' }); return; }
 
   try {
-    const sessionId = await getOrCreateSession(userId);
+    const sessionId = await getOrCreateSession(userId, username);
     const result = await semantleGame.processGuess(sessionId, word);
 
     res.json({

@@ -116,9 +116,9 @@ function buildStateResponse(session: GameSession) {
 }
 
 /** Save a completed game to the DB so the bot can use it for recaps */
-async function saveCompletedGame(userId: string, session: GameSession): Promise<void> {
+async function saveCompletedGame(userId: string, session: GameSession, username?: string): Promise<void> {
   try {
-    await userRepo.upsertUser(userId, 'activity_user_' + userId);
+    await userRepo.upsertUser(userId, username || 'activity_user_' + userId);
 
     const summary = session.tracker.getSummary();
     const existing = await sessionRepo.getActiveSession(userId, 'duotrigordle', new Date());
@@ -213,7 +213,7 @@ app.get('/game/state', (req, res) => {
 // Submit a guess
 app.post('/game/guess', async (req, res) => {
   const userId = (req.query.id as string) || 'default';
-  const { word } = req.body;
+  const { word, username } = req.body;
   console.log('[guess]', userId, word);
   if (!word) { res.status(400).json({ error: 'word required' }); return; }
 
@@ -233,7 +233,7 @@ app.post('/game/guess', async (req, res) => {
 
   // Save to DB when game completes
   if (result.isGameOver && userId !== 'default' && !userId.startsWith('local_')) {
-    await saveCompletedGame(userId, session);
+    await saveCompletedGame(userId, session, username);
   }
 
   res.json({
@@ -294,6 +294,7 @@ app.post('/game/complete', async (req, res) => {
 // Give up — end game early when win is impossible
 app.post('/game/give-up', async (req, res) => {
   const userId = (req.query.id as string) || 'default';
+  const { username } = req.body || {};
   console.log('[give-up]', userId);
   const session = getSession(userId);
 
@@ -301,7 +302,7 @@ app.post('/game/give-up', async (req, res) => {
 
   // Save as completed loss
   if (userId !== 'default' && !userId.startsWith('local_')) {
-    await saveCompletedGame(userId, session);
+    await saveCompletedGame(userId, session, username);
   }
 
   res.json(buildStateResponse(session));

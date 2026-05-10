@@ -84,10 +84,10 @@ function getSession(id: string): TravleGameState {
 }
 
 /** Save a completed game to the DB so the bot can use it for recaps */
-async function saveCompletedGame(userId: string, state: TravleGameState): Promise<void> {
+async function saveCompletedGame(userId: string, state: TravleGameState, username?: string): Promise<void> {
   try {
     // Ensure user exists (upsert with a placeholder username — bot will have the real one)
-    await userRepo.upsertUser(userId, 'activity_user_' + userId);
+    await userRepo.upsertUser(userId, username || 'activity_user_' + userId);
 
     // Check if session already exists for today
     const existing = await sessionRepo.getActiveSession(userId, 'travle', new Date());
@@ -194,7 +194,7 @@ app.get('/game/puzzle', (req, res) => {
 // Submit a guess
 app.post('/game/guess', async (req, res) => {
   const sessionId = (req.query.id as string) || 'default';
-  const { country } = req.body;
+  const { country, username } = req.body;
   console.log('[guess]', sessionId, country);
   if (!country) { res.status(400).json({ error: 'country required' }); return; }
 
@@ -203,7 +203,7 @@ app.post('/game/guess', async (req, res) => {
 
   // Save to DB when game completes (sessionId is the Discord user ID)
   if (result.isGameOver && sessionId !== 'default' && !sessionId.startsWith('local_')) {
-    await saveCompletedGame(sessionId, state);
+    await saveCompletedGame(sessionId, state, username);
   }
 
   res.json({

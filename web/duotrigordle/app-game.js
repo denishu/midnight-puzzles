@@ -178,7 +178,7 @@ async function submitGuess() {
   const resp = await fetch('/game/guess' + getSessionParam(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ word }),
+    body: JSON.stringify({ word, username: getDiscordUser()?.username }),
   });
   const result = await resp.json();
 
@@ -276,7 +276,11 @@ function checkEarlyLoss(data) {
 async function giveUp() {
   document.getElementById('early-loss').classList.remove('active');
   // Tell the server to end the game
-  const resp = await fetch('/game/give-up' + getSessionParam(), { method: 'POST' });
+  const resp = await fetch('/game/give-up' + getSessionParam(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: getDiscordUser()?.username }),
+  });
   const result = await resp.json();
   gameOver = true;
   renderGrids(result.grids);

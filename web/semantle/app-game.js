@@ -20,7 +20,9 @@ function getSessionParam() {
 
 // --- API calls ---
 async function loadState() {
-  const resp = await fetch('/game/state' + getSessionParam());
+  const user = getDiscordUser();
+  const usernameParam = user ? '&username=' + encodeURIComponent(user.username) : '';
+  const resp = await fetch('/game/state' + getSessionParam() + usernameParam);
   const data = await resp.json();
   guesses = data.guesses || [];
   gameOver = data.isComplete;
@@ -54,7 +56,7 @@ async function submitGuess() {
   const resp = await fetch('/game/guess' + getSessionParam(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ word }),
+    body: JSON.stringify({ word, username: getDiscordUser()?.username }),
   });
   const result = await resp.json();
 
