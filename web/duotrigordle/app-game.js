@@ -90,6 +90,7 @@ function renderGrids(grids) {
         el.classList.add('focused');
       }
       updateKeyboardStates(lastGridsData);
+      renderNumberLine(lastGridsData);
     });
   });
 }
@@ -98,7 +99,8 @@ function renderNumberLine(grids) {
   const line = document.getElementById('number-line');
   line.innerHTML = grids.map(g => {
     const cls = g.isComplete ? ' solved' : '';
-    return '<div class="nl-num' + cls + '">' + (g.gridIndex + 1) + '</div>';
+    const focused = (focusedGrid === g.gridIndex) ? ' focused' : '';
+    return '<div class="nl-num' + cls + focused + '">' + (g.gridIndex + 1) + '</div>';
   }).join('');
 }
 
