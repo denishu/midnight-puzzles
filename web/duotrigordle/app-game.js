@@ -11,6 +11,8 @@ let lastTargetWords = null;
 
 // Keyboard letter states: best status across all grids
 const letterStates = {};
+let focusedGrid = null; // null = global keyboard, number = focused grid index
+let lastGridsData = null; // cached for re-rendering keyboard on focus change
 
 function getSessionParam() {
   if (sessionUserId) {
@@ -47,12 +49,49 @@ function renderGrids(grids) {
       rows.push('<div class="mini-row">' + cells + '</div>');
     }
 
-    return '<div class="mini-grid' + solved + '">' +
+    // Known-letters row: show confirmed greens for unsolved grids
+    let knownRow = '';
+    if (!g.isComplete && g.guesses.length > 0) {
+      const known = ['', '', '', '', ''];
+      for (const guess of g.guesses) {
+        guess.feedback.forEach((f, idx) => {
+          if (f.status === 'correct') {
+            known[idx] = f.letter.toUpperCase();
+          }
+        });
+      }
+      // Only show if at least one letter is known
+      if (known.some(k => k !== '')) {
+        const knownCells = known.map(k =>
+          '<div class="mini-cell known">' + (k || '') + '</div>'
+        ).join('');
+        knownRow = '<div class="mini-row known-row">' + knownCells + '</div>';
+      }
+    }
+
+    const focused = (focusedGrid === g.gridIndex) ? ' focused' : '';
+    return '<div class="mini-grid' + solved + focused + '" data-grid-index="' + g.gridIndex + '">' +
       check +
       '<div class="mini-grid-label">' + (g.gridIndex + 1) + '</div>' +
-      '<div class="mini-grid-rows">' + rows.join('') + '</div>' +
+      '<div class="mini-grid-rows">' + rows.join('') + knownRow + '</div>' +
     '</div>';
   }).join('');
+
+  // Add click handlers for grid focus
+  area.querySelectorAll('.mini-grid').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = parseInt(el.dataset.gridIndex);
+      if (focusedGrid === idx) {
+        focusedGrid = null;
+        el.classList.remove('focused');
+      } else {
+        area.querySelectorAll('.mini-grid.focused').forEach(f => f.classList.remove('focused'));
+        focusedGrid = idx;
+        el.classList.add('focused');
+      }
+      updateKeyboardStates(lastGridsData);
+    });
+  });
 }
 
 function renderNumberLine(grids) {
@@ -64,10 +103,17 @@ function renderNumberLine(grids) {
 }
 
 function updateKeyboardStates(grids) {
+  // Cache grids data for focus toggling
+  lastGridsData = grids;
+
   // Reset
   for (const key in letterStates) delete letterStates[key];
 
-  for (const grid of grids) {
+  // If a grid is focused, only use that grid's feedback
+  const gridsToUse = focusedGrid !== null ? [grids[focusedGrid]] : grids;
+
+  for (const grid of gridsToUse) {
+    if (!grid) continue;
     for (const guess of grid.guesses) {
       for (const f of guess.feedback) {
         const letter = f.letter.toLowerCase();
