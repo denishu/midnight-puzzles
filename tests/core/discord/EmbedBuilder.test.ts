@@ -31,7 +31,7 @@ describe('EmbedBuilder', () => {
       expect(embed.data.title).toContain('Semantle');
       expect(embed.data.description).toContain('semantic similarity');
       expect(embed.data.fields).toHaveLength(1);
-      expect(embed.data.fields?.[0]?.name).toContain('Recent Guesses');
+      expect(embed.data.fields?.[0]?.name).toContain('Top Guesses');
     });
 
     it('should create a Semantle embed for completed game', () => {

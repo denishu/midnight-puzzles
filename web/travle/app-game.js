@@ -132,7 +132,9 @@ function zoomToCountries(names) {
 function getSessionParam() {
   // Use Discord user ID if authenticated, otherwise fall back to localStorage
   if (sessionUserId) {
-    return '?id=' + encodeURIComponent(sessionUserId);
+    let param = '?id=' + encodeURIComponent(sessionUserId);
+    if (discordGuildId) param += '&guildId=' + encodeURIComponent(discordGuildId);
+    return param;
   }
   // Fallback for local dev / non-Discord usage
   let id = localStorage.getItem('travle_session_id');

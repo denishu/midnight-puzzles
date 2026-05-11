@@ -276,7 +276,17 @@ export class TravleBot extends BaseBotApplication {
   private async handleResults(interaction: any): Promise<void> {
     try {
       await interaction.deferReply({ ephemeral: false });
-      const state = this.cache.get(interaction.user.id);
+      let state = this.cache.get(interaction.user.id);
+
+      // If not in memory, check DB for a session played via Activity or another context
+      if (!state) {
+        const dbSession = await this.sessionRepo.getActiveSession(interaction.user.id, 'travle', new Date());
+        if (dbSession && dbSession.gameData && dbSession.gameData.puzzle) {
+          state = dbSession.gameData as unknown as TravleGameState;
+          this.cache.set(interaction.user.id, state);
+        }
+      }
+
       if (!state) { await interaction.editReply({ content: 'You haven\'t played today. Use `/play` to start!' }); return; }
       if (!state.isComplete) { await interaction.editReply({ content: 'Finish the puzzle first!' }); return; }
       const pz = state.puzzle;

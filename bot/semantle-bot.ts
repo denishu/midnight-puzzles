@@ -314,10 +314,18 @@ export class SemantleBot extends BaseBotApplication {
     try {
       await interaction.deferReply({ ephemeral: false }); // Public so others can see
 
-      const sessionId = this.userSessions.get(userId);
+      let sessionId = this.userSessions.get(userId);
       if (!sessionId) {
-        await interaction.editReply({ content: 'You haven\'t started today\'s puzzle yet. Use `/play` to begin!' });
-        return;
+        // Check DB for a session played via Activity or another context
+        await this.userRepo.upsertUser(userId, interaction.user.username);
+        const session = await this.semantleGame.startSession(userId, interaction.guildId ?? 'dm');
+        sessionId = session.id;
+        this.userSessions.set(userId, sessionId);
+
+        if (session.attempts === 0) {
+          await interaction.editReply({ content: 'You haven\'t started today\'s puzzle yet. Use `/play` to begin!' });
+          return;
+        }
       }
 
       const gameState = await this.semantleGame.getGameState(sessionId);
@@ -352,10 +360,18 @@ export class SemantleBot extends BaseBotApplication {
     try {
       await interaction.deferReply({ ephemeral: true });
 
-      const sessionId = this.userSessions.get(userId);
+      let sessionId = this.userSessions.get(userId);
       if (!sessionId) {
-        await interaction.editReply({ content: 'Start a game first with `/play`!' });
-        return;
+        // Check DB for a session played via Activity or another context
+        await this.userRepo.upsertUser(userId, interaction.user.username);
+        const session = await this.semantleGame.startSession(userId, interaction.guildId ?? 'dm');
+        sessionId = session.id;
+        this.userSessions.set(userId, sessionId);
+
+        if (session.attempts === 0) {
+          await interaction.editReply({ content: 'Start a game first with `/play`!' });
+          return;
+        }
       }
 
       const hint = await this.semantleGame.getHint(sessionId);

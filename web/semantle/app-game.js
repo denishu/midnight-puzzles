@@ -9,7 +9,11 @@ let guesses = [];
 let gameOver = false;
 
 function getSessionParam() {
-  if (sessionUserId) return '?id=' + encodeURIComponent(sessionUserId);
+  if (sessionUserId) {
+    let param = '?id=' + encodeURIComponent(sessionUserId);
+    if (discordGuildId) param += '&guildId=' + encodeURIComponent(discordGuildId);
+    return param;
+  }
   let id = localStorage.getItem('semantle_session_id');
   if (!id) {
     id = 'local_' + Math.random().toString(36).slice(2) + Date.now().toString(36);

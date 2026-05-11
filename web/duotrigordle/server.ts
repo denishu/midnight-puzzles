@@ -66,7 +66,7 @@ function scheduleDailyCleanup() {
   console.log(`[cleanup] Next session purge in ${Math.round(msUntilMidnight / 60000)} minutes`);
 }
 
-function getSession(id: string): GameSession {
+async function getSession(id: string): Promise<GameSession> {
   const today = new Date().toISOString().split('T')[0]!;
   if (today !== sessionsDate) {
     console.log(`[cleanup] Date rolled to ${today}, purging ${sessions.size} stale sessions`);
@@ -74,15 +74,33 @@ function getSession(id: string): GameSession {
     sessionsDate = today;
   }
 
+  // Check in-memory cache first
   let session = sessions.get(id);
-  if (!session) {
-    const puzzle = GridManager.generateDailyPuzzle(new Date(), validator);
-    const gm = new GridManager(validator);
-    gm.initializeGrids(puzzle);
-    const tracker = new ProgressTracker(gm);
-    session = { gridManager: gm, tracker, puzzle };
-    sessions.set(id, session);
+  if (session) return session;
+
+  // Create a fresh GridManager for today's puzzle
+  const puzzle = GridManager.generateDailyPuzzle(new Date(), validator);
+  const gm = new GridManager(validator);
+  gm.initializeGrids(puzzle);
+  const tracker = new ProgressTracker(gm);
+  session = { gridManager: gm, tracker, puzzle };
+
+  // Check DB for an existing session and replay guesses
+  if (id !== 'default' && !id.startsWith('local_')) {
+    const dbSession = await sessionRepo.getActiveSession(id, 'duotrigordle', new Date());
+    if (dbSession && dbSession.gameData?.guesses && Array.isArray(dbSession.gameData.guesses)) {
+      // Replay all stored guesses to reconstruct grid state
+      for (const word of dbSession.gameData.guesses) {
+        gm.applyGuess(word);
+      }
+      // If it was a give-up, mark it
+      if (dbSession.result?.gaveUp || dbSession.gameData?.gaveUp) {
+        session.givenUp = true;
+      }
+    }
   }
+
+  sessions.set(id, session);
   return session;
 }
 
@@ -112,51 +130,62 @@ function buildStateResponse(session: GameSession) {
     progress: session.tracker.formatProgress(),
     // Reveal unsolved targets on game over
     unsolvedTargets: (summary.isGameOver || session.givenUp) ? session.gridManager.getUnsolvedTargets() : undefined,
+    // Include target words on game over for the word list card
+    targetWords: (summary.isGameOver || session.givenUp) ? session.puzzle.targetWords : undefined,
   };
 }
 
-/** Save a completed game to the DB so the bot can use it for recaps */
-async function saveCompletedGame(userId: string, session: GameSession, username?: string): Promise<void> {
+/** Save game state to the DB (called on every guess and give-up) */
+async function saveGameState(userId: string, session: GameSession, username?: string, guildId?: string): Promise<void> {
   try {
     await userRepo.upsertUser(userId, username || 'activity_user_' + userId);
 
     const summary = session.tracker.getSummary();
+    // Collect all guessed words (same across all grids, just grab from grid 0)
+    const guesses = session.gridManager.getGrids()[0]?.guesses.map(g => g.word) ?? [];
+
     const existing = await sessionRepo.getActiveSession(userId, 'duotrigordle', new Date());
 
     if (existing) {
       await sessionRepo.updateGameData(existing.id, {
+        guesses,
         gridsCompleted: summary.completedGrids,
         guessesUsed: summary.guessesUsed,
+        gaveUp: !!session.givenUp,
       });
-      if (summary.isGameOver) {
+      if (summary.isGameOver || session.givenUp) {
         await sessionRepo.completeSession(existing.id, {
           isWin: summary.isWin,
           gridsCompleted: summary.completedGrids,
           guessesUsed: summary.guessesUsed,
+          gaveUp: !!session.givenUp,
         });
       }
     } else {
       const created = await sessionRepo.createSession({
         userId,
-        serverId: 'activity',
+        serverId: guildId || 'activity',
         gameType: 'duotrigordle',
         puzzleDate: new Date(),
         maxAttempts: MAX_GUESSES,
         gameData: {
+          guesses,
           gridsCompleted: summary.completedGrids,
           guessesUsed: summary.guessesUsed,
+          gaveUp: !!session.givenUp,
         },
       });
-      if (summary.isGameOver) {
+      if (summary.isGameOver || session.givenUp) {
         await sessionRepo.completeSession(created.id, {
           isWin: summary.isWin,
           gridsCompleted: summary.completedGrids,
           guessesUsed: summary.guessesUsed,
+          gaveUp: !!session.givenUp,
         });
       }
     }
   } catch (e) {
-    console.error('[db] Failed to save completed game:', e);
+    console.error('[db] Failed to save game state:', e);
   }
 }
 
@@ -203,21 +232,22 @@ app.post('/game/discord/token', async (req, res) => {
 });
 
 // Get current game state
-app.get('/game/state', (req, res) => {
+app.get('/game/state', async (req, res) => {
   const userId = (req.query.id as string) || 'default';
   console.log('[session] state request from:', userId);
-  const session = getSession(userId);
+  const session = await getSession(userId);
   res.json(buildStateResponse(session));
 });
 
 // Submit a guess
 app.post('/game/guess', async (req, res) => {
   const userId = (req.query.id as string) || 'default';
+  const guildId = req.query.guildId as string | undefined;
   const { word, username } = req.body;
   console.log('[guess]', userId, word);
   if (!word) { res.status(400).json({ error: 'word required' }); return; }
 
-  const session = getSession(userId);
+  const session = await getSession(userId);
 
   if (session.givenUp) {
     res.json({ isValid: false, error: 'Game is already over.' });
@@ -231,9 +261,9 @@ app.post('/game/guess', async (req, res) => {
     return;
   }
 
-  // Save to DB when game completes
-  if (result.isGameOver && userId !== 'default' && !userId.startsWith('local_')) {
-    await saveCompletedGame(userId, session, username);
+  // Save to DB on every valid guess (enables cross-context resumption)
+  if (userId !== 'default' && !userId.startsWith('local_')) {
+    await saveGameState(userId, session, username, guildId);
   }
 
   res.json({
@@ -294,26 +324,27 @@ app.post('/game/complete', async (req, res) => {
 // Give up — end game early when win is impossible
 app.post('/game/give-up', async (req, res) => {
   const userId = (req.query.id as string) || 'default';
+  const guildId = req.query.guildId as string | undefined;
   const { username } = req.body || {};
   console.log('[give-up]', userId);
-  const session = getSession(userId);
+  const session = await getSession(userId);
 
   session.givenUp = true;
 
   // Save as completed loss
   if (userId !== 'default' && !userId.startsWith('local_')) {
-    await saveCompletedGame(userId, session, username);
+    await saveGameState(userId, session, username, guildId);
   }
 
   res.json(buildStateResponse(session));
 });
 
 // Reset session (testing)
-app.post('/game/reset', (req, res) => {
+app.post('/game/reset', async (req, res) => {
   const userId = (req.query.id as string) || 'default';
   console.log('[reset]', userId);
   sessions.delete(userId);
-  const session = getSession(userId);
+  const session = await getSession(userId);
   res.json(buildStateResponse(session));
 });
 

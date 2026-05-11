@@ -65,7 +65,7 @@ function scheduleDailyCleanup() {
   console.log(`[cleanup] Next session purge in ${Math.round(msUntilMidnight / 60000)} minutes`);
 }
 
-function getSession(id: string): TravleGameState {
+async function getSession(id: string): Promise<TravleGameState> {
   // If the date rolled over but cleanup hasn't fired yet, clear now
   const today = new Date().toISOString().split('T')[0]!;
   if (today !== sessionsDate) {
@@ -74,17 +74,29 @@ function getSession(id: string): TravleGameState {
     sessionsDate = today;
   }
 
+  // Check in-memory cache first
   let state = sessions.get(id);
-  if (!state) {
-    const puzzle = travleGame.genPuzzle(new Date());
-    state = travleGame.newState(puzzle);
-    sessions.set(id, state);
+  if (state) return state;
+
+  // Check DB for an existing session today (handles cross-context resumption)
+  if (id !== 'default' && !id.startsWith('local_')) {
+    const dbSession = await sessionRepo.getActiveSession(id, 'travle', new Date());
+    if (dbSession && dbSession.gameData && dbSession.gameData.puzzle) {
+      state = dbSession.gameData as unknown as TravleGameState;
+      sessions.set(id, state);
+      return state;
+    }
   }
+
+  // Create a new session
+  const puzzle = travleGame.genPuzzle(new Date());
+  state = travleGame.newState(puzzle);
+  sessions.set(id, state);
   return state;
 }
 
 /** Save a completed game to the DB so the bot can use it for recaps */
-async function saveCompletedGame(userId: string, state: TravleGameState, username?: string): Promise<void> {
+async function saveCompletedGame(userId: string, state: TravleGameState, username?: string, guildId?: string): Promise<void> {
   try {
     // Ensure user exists (upsert with a placeholder username — bot will have the real one)
     await userRepo.upsertUser(userId, username || 'activity_user_' + userId);
@@ -103,7 +115,7 @@ async function saveCompletedGame(userId: string, state: TravleGameState, usernam
     } else {
       await sessionRepo.createSession({
         userId,
-        serverId: 'activity', // Activity sessions don't have a guild context
+        serverId: guildId || 'activity',
         gameType: 'travle',
         puzzleDate: new Date(),
         maxAttempts: state.puzzle.maxGuesses,
@@ -174,10 +186,10 @@ app.get('/game/geojson', async (_req, res) => {
 });
 
 // Get today's puzzle
-app.get('/game/puzzle', (req, res) => {
+app.get('/game/puzzle', async (req, res) => {
   const sessionId = (req.query.id as string) || 'default';
   console.log('[session] puzzle request from:', sessionId);
-  const state = getSession(sessionId);
+  const state = await getSession(sessionId);
   res.json({
     start: state.puzzle.start,
     end: state.puzzle.end,
@@ -194,16 +206,17 @@ app.get('/game/puzzle', (req, res) => {
 // Submit a guess
 app.post('/game/guess', async (req, res) => {
   const sessionId = (req.query.id as string) || 'default';
+  const guildId = req.query.guildId as string | undefined;
   const { country, username } = req.body;
   console.log('[guess]', sessionId, country);
   if (!country) { res.status(400).json({ error: 'country required' }); return; }
 
-  const state = getSession(sessionId);
+  const state = await getSession(sessionId);
   const result = travleGame.guess(state, country);
 
-  // Save to DB when game completes (sessionId is the Discord user ID)
-  if (result.isGameOver && sessionId !== 'default' && !sessionId.startsWith('local_')) {
-    await saveCompletedGame(sessionId, state, username);
+  // Save to DB on every guess (enables cross-context resumption)
+  if (sessionId !== 'default' && !sessionId.startsWith('local_')) {
+    await saveCompletedGame(sessionId, state, username, guildId);
   }
 
   res.json({
@@ -214,9 +227,9 @@ app.post('/game/guess', async (req, res) => {
 });
 
 // Get a hint: reveal an unguessed country on the cheapest path
-app.get('/game/hint', (req, res) => {
+app.get('/game/hint', async (req, res) => {
   const sessionId = (req.query.id as string) || 'default';
-  const state = getSession(sessionId);
+  const state = await getSession(sessionId);
 
   if (state.isComplete) {
     res.json({ hint: null });
@@ -313,10 +326,10 @@ app.post('/game/complete', async (req, res) => {
 });
 
 // Reset session
-app.post('/game/reset', (req, res) => {
+app.post('/game/reset', async (req, res) => {
   const sessionId = (req.query.id as string) || 'default';
   sessions.delete(sessionId);
-  const state = getSession(sessionId);
+  const state = await getSession(sessionId);
   res.json({
     start: state.puzzle.start,
     end: state.puzzle.end,
