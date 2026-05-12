@@ -134,6 +134,23 @@ export class GameStateRepository {
   }
 
   /**
+   * Update server ID for a session (fixes sessions created before guild ID was available)
+   */
+  async updateServerId(sessionId: string, serverId: string): Promise<void> {
+    try {
+      const sql = `
+        UPDATE game_sessions 
+        SET server_id = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `;
+      await this.db.query(sql, [serverId, sessionId]);
+    } catch (error) {
+      this.logger.error('Error updating server ID:', { sessionId, serverId, error });
+      throw error;
+    }
+  }
+
+  /**
    * Increment attempt counter
    */
   async incrementAttempts(sessionId: string): Promise<void> {
@@ -320,7 +337,7 @@ export class GameStateRepository {
         SELECT gs.*, u.username
         FROM game_sessions gs
         JOIN users u ON gs.user_id = u.discord_id
-        WHERE gs.game_type = $1 AND gs.puzzle_date = $2 AND gs.is_complete = TRUE
+        WHERE gs.game_type = $1 AND gs.puzzle_date = $2 AND (gs.is_complete = TRUE OR gs.game_data LIKE '%"isComplete":true%' OR gs.game_data LIKE '%"isComplete": true%')
         ORDER BY gs.server_id, gs.end_time ASC
       `;
       const rows = await this.db.query<any>(sql, [gameType, dateStr]);

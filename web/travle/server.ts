@@ -104,16 +104,30 @@ async function saveCompletedGame(userId: string, state: TravleGameState, usernam
     // Check if session already exists for today
     const existing = await sessionRepo.getActiveSession(userId, 'travle', new Date());
     if (existing) {
+      // Fix server_id if we now have the guild ID
+      if (guildId && existing.serverId === 'activity') {
+        await sessionRepo.updateServerId(existing.id, guildId);
+      }
       await sessionRepo.updateGameData(existing.id, state as any);
-      if (state.isComplete) {
-        await sessionRepo.completeSession(existing.id, {
-          isWin: state.isWin,
-          guessCount: state.guesses.length,
-          shortestPath: state.puzzle.shortestPathLength,
-        });
+      if (state.isComplete && !existing.isComplete) {
+        try {
+          await sessionRepo.completeSession(existing.id, {
+            isWin: state.isWin,
+            guessCount: state.guesses.length,
+            shortestPath: state.puzzle.shortestPathLength,
+          });
+        } catch (e) {
+          console.error('[db] completeSession failed, retrying:', e);
+          // Retry once
+          await sessionRepo.completeSession(existing.id, {
+            isWin: state.isWin,
+            guessCount: state.guesses.length,
+            shortestPath: state.puzzle.shortestPathLength,
+          });
+        }
       }
     } else {
-      await sessionRepo.createSession({
+      const created = await sessionRepo.createSession({
         userId,
         serverId: guildId || 'activity',
         gameType: 'travle',
@@ -121,6 +135,13 @@ async function saveCompletedGame(userId: string, state: TravleGameState, usernam
         maxAttempts: state.puzzle.maxGuesses,
         gameData: state as any,
       });
+      if (state.isComplete) {
+        await sessionRepo.completeSession(created.id, {
+          isWin: state.isWin,
+          guessCount: state.guesses.length,
+          shortestPath: state.puzzle.shortestPathLength,
+        });
+      }
     }
   } catch (e) {
     console.error('[db] Failed to save completed game:', e);

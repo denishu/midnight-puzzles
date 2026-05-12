@@ -147,6 +147,10 @@ async function saveGameState(userId: string, session: GameSession, username?: st
     const existing = await sessionRepo.getActiveSession(userId, 'duotrigordle', new Date());
 
     if (existing) {
+      // Fix server_id if we now have the guild ID
+      if (guildId && existing.serverId === 'activity') {
+        await sessionRepo.updateServerId(existing.id, guildId);
+      }
       await sessionRepo.updateGameData(existing.id, {
         guesses,
         gridsCompleted: summary.completedGrids,

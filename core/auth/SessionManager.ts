@@ -35,6 +35,11 @@ export class SessionManager {
     
     if (existingSession) {
       this.logger.info(`Resuming session for user ${userId}, game ${gameType}`);
+      // Fix server_id if we now have the real guild ID
+      if (serverId && serverId !== 'activity' && existingSession.serverId === 'activity') {
+        await this.gameStateRepo.updateServerId(existingSession.id, serverId);
+        existingSession.serverId = serverId;
+      }
       this.trackSession(existingSession);
       return existingSession;
     }
