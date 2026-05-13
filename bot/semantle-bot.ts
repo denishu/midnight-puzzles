@@ -78,10 +78,10 @@ export class SemantleBot extends BaseBotApplication {
   private scheduleDailyMessage(): void {
     // @ts-ignore
     import('node-cron').then((cron: any) => {
-      cron.default.schedule('0 0 * * *', () => {
+      cron.default.schedule('1 0 * * *', () => {
         this.postDailyPuzzleMessage();
       }, { timezone: 'UTC' });
-      this.logger.info('Daily puzzle message scheduled for midnight UTC');
+      this.logger.info('Daily puzzle message scheduled for 00:01 UTC');
     });
   }
 

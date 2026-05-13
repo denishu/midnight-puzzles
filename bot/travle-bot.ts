@@ -51,10 +51,10 @@ export class TravleBot extends BaseBotApplication {
 
   private scheduleDailyMessage(): void {
     // Run at midnight UTC every day
-    cron.schedule('0 0 * * *', () => {
+    cron.schedule('3 0 * * *', () => {
       this.postDailyPuzzleMessage();
     }, { timezone: 'UTC' });
-    this.logger.info('Daily puzzle message scheduled for midnight UTC');
+    this.logger.info('Daily puzzle message scheduled for 00:03 UTC');
   }
 
   private async postDailyPuzzleMessage(): Promise<void> {

@@ -60,10 +60,10 @@ export class DuotrigordleBot extends BaseBotApplication {
   private scheduleDailyMessage(): void {
     // @ts-ignore
     import('node-cron').then((cron: any) => {
-      cron.default.schedule('0 0 * * *', () => {
+      cron.default.schedule('5 0 * * *', () => {
         this.postDailyPuzzleMessage();
       }, { timezone: 'UTC' });
-      this.logger.info('Daily puzzle message scheduled for midnight UTC');
+      this.logger.info('Daily puzzle message scheduled for 00:05 UTC');
     });
   }
 
