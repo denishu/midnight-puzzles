@@ -233,6 +233,30 @@ body {
 #info-popup.active { display: block; animation: toastIn 0.2s ease-out; }
 #info-popup h3 { color: #f1f5f9; font-size: 14px; margin-bottom: 10px; }
 .dot-legend { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+
+/* Mobile layout */
+@media (max-width: 600px) {
+  #app { max-width: 100%; }
+  #header h1 { font-size: 16px; }
+  #header #meta { font-size: 11px; }
+  #grid-area { grid-template-columns: repeat(2, 1fr); gap: 4px; padding: 6px 8px; }
+  .mini-cell { width: 20px; height: 20px; font-size: 10px; }
+  .mini-cell.known { font-size: 9px; }
+  .mini-grid-label { font-size: 8px; }
+  #number-line { gap: 2px; padding: 4px 8px; }
+  .nl-num { width: 18px; height: 16px; font-size: 9px; }
+  #input-area { padding: 8px 12px; }
+  #guess-input { padding: 10px 12px; font-size: 13px; }
+  #keyboard { padding: 2px 4px 4px; }
+  .kb-key { min-width: 22px; height: 28px; font-size: 10px; }
+  .kb-key.wide { min-width: 36px; font-size: 9px; }
+  .kb-row { gap: 2px; margin-bottom: 2px; }
+  #status-bar { bottom: 140px; }
+  #early-loss { bottom: 140px; max-width: 90%; }
+  #game-over h2 { font-size: 22px; }
+  #game-over p { font-size: 13px; padding: 0 16px; }
+  #go-words { max-width: 90%; }
+}
 </style>
 
 <div id="app">
