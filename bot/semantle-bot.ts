@@ -108,58 +108,62 @@ export class SemantleBot extends BaseBotApplication {
 
       // Post to all guilds the bot is in
       for (const guild of this.client.guilds.cache.values()) {
-        // Find the designated channel
-        const serverConfig = await this.configRepo.getServerConfig(guild.id);
-        let channel: any = null;
+        try {
+          // Find the designated channel
+          const serverConfig = await this.configRepo.getServerConfig(guild.id);
+          let channel: any = null;
 
-        if (serverConfig?.channelId) {
-          channel = guild.channels.cache.get(serverConfig.channelId);
-        }
-        if (!channel) {
-          channel = guild.systemChannel || guild.channels.cache.find(
-            (ch: any) => ch.isTextBased() && ch.permissionsFor(guild.members.me!)?.has('SendMessages')
-          );
-        }
-        if (!channel || !('send' in channel)) continue;
-
-        // --- Yesterday's recap ---
-        const serverSessions = byServer.get(guild.id) || [];
-        if (serverSessions.length > 0) {
-          // Update streak
-          const streak = await this.configRepo.getStreak(guild.id, 'semantle');
-          const yesterdayStr = yesterday.toISOString().split('T')[0]!;
-          const dayBeforeStr = new Date(yesterday.getTime() - 86400000).toISOString().split('T')[0]!;
-
-          const anyWin = serverSessions.some(s => s.result?.isWin !== false);
-          let newCount: number;
-          if (anyWin) {
-            newCount = (streak.lastDate === dayBeforeStr) ? streak.count + 1 : 1;
-          } else {
-            newCount = 0;
+          if (serverConfig?.channelId) {
+            channel = guild.channels.cache.get(serverConfig.channelId);
           }
-          await this.configRepo.updateStreak(guild.id, 'semantle', newCount, yesterdayStr);
+          if (!channel) {
+            channel = guild.systemChannel || guild.channels.cache.find(
+              (ch: any) => ch.isTextBased() && ch.permissionsFor(guild.members.me!)?.has('SendMessages')
+            );
+          }
+          if (!channel || !('send' in channel)) continue;
 
-          // Build recap embed
-          const recapEmbed = EmbedBuilder.createGameEmbed('semantle', '🔮 Yesterday\'s Semantle Recap');
-          const lines = serverSessions.map(s => {
-            const guessCount = s.attempts || s.gameData?.guesses?.length || '?';
-            const won = s.isComplete;
-            const score = won ? `✅ Solved in ${guessCount} guesses` : '❌ DNF';
-            return `**${s.username}** — ${score}`;
-          });
+          // --- Yesterday's recap ---
+          const serverSessions = byServer.get(guild.id) || [];
+          if (serverSessions.length > 0) {
+            // Update streak
+            const streak = await this.configRepo.getStreak(guild.id, 'semantle');
+            const yesterdayStr = yesterday.toISOString().split('T')[0]!;
+            const dayBeforeStr = new Date(yesterday.getTime() - 86400000).toISOString().split('T')[0]!;
 
-          recapEmbed.setDescription(lines.join('\n'));
-          if (newCount > 0) {
-            recapEmbed.setFooter({ text: `🔥 Server streak: ${newCount} day${newCount > 1 ? 's' : ''}` });
+            const anyWin = serverSessions.some(s => s.result?.isWin !== false);
+            let newCount: number;
+            if (anyWin) {
+              newCount = (streak.lastDate === dayBeforeStr) ? streak.count + 1 : 1;
+            } else {
+              newCount = 0;
+            }
+            await this.configRepo.updateStreak(guild.id, 'semantle', newCount, yesterdayStr);
+
+            // Build recap embed
+            const recapEmbed = EmbedBuilder.createGameEmbed('semantle', '🔮 Yesterday\'s Semantle Recap');
+            const lines = serverSessions.map(s => {
+              const guessCount = s.attempts || s.gameData?.guesses?.length || '?';
+              const won = s.isComplete;
+              const score = won ? `✅ Solved in ${guessCount} guesses` : '❌ DNF';
+              return `**${s.username}** — ${score}`;
+            });
+
+            recapEmbed.setDescription(lines.join('\n'));
+            if (newCount > 0) {
+              recapEmbed.setFooter({ text: `🔥 Server streak: ${newCount} day${newCount > 1 ? 's' : ''}` });
+            }
+
+            await (channel as any).send({ embeds: [recapEmbed] });
           }
 
-          await (channel as any).send({ embeds: [recapEmbed] });
+          // --- Today's new puzzle ---
+          const newEmbed = EmbedBuilder.createGameEmbed('semantle', '🔮 New Semantle Puzzle!');
+          newEmbed.setDescription('A new word is waiting to be discovered!\n\nUse `/play` or launch the Activity to start guessing.');
+          await (channel as any).send({ embeds: [newEmbed] });
+        } catch (guildError) {
+          this.logger.error(`Failed to post to guild ${guild.id}:`, guildError);
         }
-
-        // --- Today's new puzzle ---
-        const newEmbed = EmbedBuilder.createGameEmbed('semantle', '🔮 New Semantle Puzzle!');
-        newEmbed.setDescription('A new word is waiting to be discovered!\n\nUse `/play` or launch the Activity to start guessing.');
-        await (channel as any).send({ embeds: [newEmbed] });
       }
 
       this.logger.info('Daily Semantle puzzle message posted with recap');

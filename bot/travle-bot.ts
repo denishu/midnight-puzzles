@@ -83,67 +83,71 @@ export class TravleBot extends BaseBotApplication {
 
       // Post to all guilds the bot is in
       for (const guild of this.client.guilds.cache.values()) {
-        // Find the designated channel
-        const serverConfig = await this.configRepo.getServerConfig(guild.id);
-        let channel: any = null;
+        try {
+          // Find the designated channel
+          const serverConfig = await this.configRepo.getServerConfig(guild.id);
+          let channel: any = null;
 
-        if (serverConfig?.channelId) {
-          channel = guild.channels.cache.get(serverConfig.channelId);
-        }
-        if (!channel) {
-          channel = guild.systemChannel || guild.channels.cache.find(
-            (ch: any) => ch.isTextBased() && ch.permissionsFor(guild.members.me!)?.has('SendMessages')
+          if (serverConfig?.channelId) {
+            channel = guild.channels.cache.get(serverConfig.channelId);
+          }
+          if (!channel) {
+            channel = guild.systemChannel || guild.channels.cache.find(
+              (ch: any) => ch.isTextBased() && ch.permissionsFor(guild.members.me!)?.has('SendMessages')
+            );
+          }
+          if (!channel || !('send' in channel)) continue;
+
+          // --- Yesterday's recap ---
+          const serverSessions = byServer.get(guild.id) || [];
+          if (serverSessions.length > 0) {
+            // Update streak
+            const streak = await this.configRepo.getStreak(guild.id, 'travle');
+            const yesterdayStr = yesterday.toISOString().split('T')[0]!;
+            const dayBeforeStr = new Date(yesterday.getTime() - 86400000).toISOString().split('T')[0]!;
+
+            const anyWin = serverSessions.some(s => s.result?.isWin);
+            let newCount: number;
+            if (anyWin) {
+              // Continue streak if last streak date was the day before yesterday
+              newCount = (streak.lastDate === dayBeforeStr) ? streak.count + 1 : 1;
+            } else {
+              newCount = 0;
+            }
+            await this.configRepo.updateStreak(guild.id, 'travle', newCount, yesterdayStr);
+
+            // Build recap embed
+            const recapEmbed = EmbedBuilder.createGameEmbed('travle', '🧭 Yesterday\'s Travle Recap');
+            const lines = serverSessions.map(s => {
+              const guessCount = s.result?.guessCount || s.gameData?.guesses?.length || '?';
+              const shortest = s.result?.shortestPath || '?';
+              const won = s.result?.isWin;
+              const over = won ? (guessCount as number) - ((shortest as number) - 1) : null;
+              const score = won ? (over! <= 0 ? '✨ Perfect' : `+${over}`) : '❌ DNF';
+              const colors = (s.gameData?.guesses || []).map((g: any) =>
+                g.status === 'green' ? '🟩' : g.status === 'yellow' ? '🟨' : '🟥'
+              ).join('');
+              return `**${s.username}** — ${score} (${guessCount} guesses)\n${colors}`;
+            });
+
+            recapEmbed.setDescription(lines.join('\n\n'));
+            if (newCount > 0) {
+              recapEmbed.setFooter({ text: `🔥 Server streak: ${newCount} day${newCount > 1 ? 's' : ''}` });
+            }
+
+            await (channel as any).send({ embeds: [recapEmbed] });
+          }
+
+          // --- Today's new puzzle ---
+          const newEmbed = EmbedBuilder.createGameEmbed('travle', '🧭 New Travle Puzzle!');
+          newEmbed.setDescription(
+            'A new path is waiting to be found!\n\n' +
+            'Use `/play` or launch the Activity to start!'
           );
+          await (channel as any).send({ embeds: [newEmbed] });
+        } catch (guildError) {
+          this.logger.error(`Failed to post to guild ${guild.id}:`, guildError);
         }
-        if (!channel || !('send' in channel)) continue;
-
-        // --- Yesterday's recap ---
-        const serverSessions = byServer.get(guild.id) || [];
-        if (serverSessions.length > 0) {
-          // Update streak
-          const streak = await this.configRepo.getStreak(guild.id, 'travle');
-          const yesterdayStr = yesterday.toISOString().split('T')[0]!;
-          const dayBeforeStr = new Date(yesterday.getTime() - 86400000).toISOString().split('T')[0]!;
-
-          const anyWin = serverSessions.some(s => s.result?.isWin);
-          let newCount: number;
-          if (anyWin) {
-            // Continue streak if last streak date was the day before yesterday
-            newCount = (streak.lastDate === dayBeforeStr) ? streak.count + 1 : 1;
-          } else {
-            newCount = 0;
-          }
-          await this.configRepo.updateStreak(guild.id, 'travle', newCount, yesterdayStr);
-
-          // Build recap embed
-          const recapEmbed = EmbedBuilder.createGameEmbed('travle', '🧭 Yesterday\'s Travle Recap');
-          const lines = serverSessions.map(s => {
-            const guessCount = s.result?.guessCount || s.gameData?.guesses?.length || '?';
-            const shortest = s.result?.shortestPath || '?';
-            const won = s.result?.isWin;
-            const over = won ? (guessCount as number) - ((shortest as number) - 1) : null;
-            const score = won ? (over! <= 0 ? '✨ Perfect' : `+${over}`) : '❌ DNF';
-            const colors = (s.gameData?.guesses || []).map((g: any) =>
-              g.status === 'green' ? '🟩' : g.status === 'yellow' ? '🟨' : '🟥'
-            ).join('');
-            return `**${s.username}** — ${score} (${guessCount} guesses)\n${colors}`;
-          });
-
-          recapEmbed.setDescription(lines.join('\n\n'));
-          if (newCount > 0) {
-            recapEmbed.setFooter({ text: `🔥 Server streak: ${newCount} day${newCount > 1 ? 's' : ''}` });
-          }
-
-          await (channel as any).send({ embeds: [recapEmbed] });
-        }
-
-        // --- Today's new puzzle ---
-        const newEmbed = EmbedBuilder.createGameEmbed('travle', '🧭 New Travle Puzzle!');
-        newEmbed.setDescription(
-          'A new path is waiting to be found!\n\n' +
-          'Use `/play` or launch the Activity to start!'
-        );
-        await (channel as any).send({ embeds: [newEmbed] });
       }
 
       this.logger.info('Daily puzzle message posted with recap');

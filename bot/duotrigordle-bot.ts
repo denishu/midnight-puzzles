@@ -93,64 +93,68 @@ export class DuotrigordleBot extends BaseBotApplication {
 
       // Post to all guilds the bot is in
       for (const guild of this.client.guilds.cache.values()) {
-        // Find the designated channel
-        const serverConfig = await this.configRepo.getServerConfig(guild.id);
-        let channel: any = null;
+        try {
+          // Find the designated channel
+          const serverConfig = await this.configRepo.getServerConfig(guild.id);
+          let channel: any = null;
 
-        if (serverConfig?.channelId) {
-          channel = guild.channels.cache.get(serverConfig.channelId);
-        }
-        if (!channel) {
-          channel = guild.systemChannel || guild.channels.cache.find(
-            (ch: any) => ch.isTextBased() && ch.permissionsFor(guild.members.me!)?.has('SendMessages')
+          if (serverConfig?.channelId) {
+            channel = guild.channels.cache.get(serverConfig.channelId);
+          }
+          if (!channel) {
+            channel = guild.systemChannel || guild.channels.cache.find(
+              (ch: any) => ch.isTextBased() && ch.permissionsFor(guild.members.me!)?.has('SendMessages')
+            );
+          }
+          if (!channel || !('send' in channel)) continue;
+
+          // --- Yesterday's recap ---
+          const serverSessions = byServer.get(guild.id) || [];
+          if (serverSessions.length > 0) {
+            // Update streak
+            const streak = await this.configRepo.getStreak(guild.id, 'duotrigordle');
+            const yesterdayStr = yesterday.toISOString().split('T')[0]!;
+            const dayBeforeStr = new Date(yesterday.getTime() - 86400000).toISOString().split('T')[0]!;
+
+            const anyWin = serverSessions.some(s => s.result?.isWin);
+            let newCount: number;
+            if (anyWin) {
+              newCount = (streak.lastDate === dayBeforeStr) ? streak.count + 1 : 1;
+            } else {
+              newCount = 0;
+            }
+            await this.configRepo.updateStreak(guild.id, 'duotrigordle', newCount, yesterdayStr);
+
+            // Build recap embed
+            const recapEmbed = EmbedBuilder.createGameEmbed('duotrigordle', '🟧 Yesterday\'s Duotrigordle Recap');
+            const lines = serverSessions.map(s => {
+              const gridsCompleted = s.result?.gridsCompleted ?? s.gameData?.gridsCompleted ?? 0;
+              const guessesUsed = s.result?.guessesUsed ?? s.attempts ?? '?';
+              const won = s.result?.isWin;
+              const score = won
+                ? `✅ Solved ${gridsCompleted}/${GRID_COUNT} in ${guessesUsed}/${MAX_GUESSES} guesses`
+                : `❌ ${gridsCompleted}/${GRID_COUNT} grids (${guessesUsed}/${MAX_GUESSES} guesses)`;
+              return `**${s.username}** — ${score}`;
+            });
+
+            recapEmbed.setDescription(lines.join('\n'));
+            if (newCount > 0) {
+              recapEmbed.setFooter({ text: `🔥 Server streak: ${newCount} day${newCount > 1 ? 's' : ''}` });
+            }
+
+            await (channel as any).send({ embeds: [recapEmbed] });
+          }
+
+          // --- Today's new puzzle ---
+          const newEmbed = EmbedBuilder.createGameEmbed('duotrigordle', '🟧 New Duotrigordle Puzzle!');
+          newEmbed.setDescription(
+            '32 words to solve!\n\n' +
+            'Launch the Activity to play today\'s puzzle. Use `/play` for details.'
           );
+          await (channel as any).send({ embeds: [newEmbed] });
+        } catch (guildError) {
+          this.logger.error(`Failed to post to guild ${guild.id}:`, guildError);
         }
-        if (!channel || !('send' in channel)) continue;
-
-        // --- Yesterday's recap ---
-        const serverSessions = byServer.get(guild.id) || [];
-        if (serverSessions.length > 0) {
-          // Update streak
-          const streak = await this.configRepo.getStreak(guild.id, 'duotrigordle');
-          const yesterdayStr = yesterday.toISOString().split('T')[0]!;
-          const dayBeforeStr = new Date(yesterday.getTime() - 86400000).toISOString().split('T')[0]!;
-
-          const anyWin = serverSessions.some(s => s.result?.isWin);
-          let newCount: number;
-          if (anyWin) {
-            newCount = (streak.lastDate === dayBeforeStr) ? streak.count + 1 : 1;
-          } else {
-            newCount = 0;
-          }
-          await this.configRepo.updateStreak(guild.id, 'duotrigordle', newCount, yesterdayStr);
-
-          // Build recap embed
-          const recapEmbed = EmbedBuilder.createGameEmbed('duotrigordle', '🟧 Yesterday\'s Duotrigordle Recap');
-          const lines = serverSessions.map(s => {
-            const gridsCompleted = s.result?.gridsCompleted ?? s.gameData?.gridsCompleted ?? 0;
-            const guessesUsed = s.result?.guessesUsed ?? s.attempts ?? '?';
-            const won = s.result?.isWin;
-            const score = won
-              ? `✅ Solved ${gridsCompleted}/${GRID_COUNT} in ${guessesUsed}/${MAX_GUESSES} guesses`
-              : `❌ ${gridsCompleted}/${GRID_COUNT} grids (${guessesUsed}/${MAX_GUESSES} guesses)`;
-            return `**${s.username}** — ${score}`;
-          });
-
-          recapEmbed.setDescription(lines.join('\n'));
-          if (newCount > 0) {
-            recapEmbed.setFooter({ text: `🔥 Server streak: ${newCount} day${newCount > 1 ? 's' : ''}` });
-          }
-
-          await (channel as any).send({ embeds: [recapEmbed] });
-        }
-
-        // --- Today's new puzzle ---
-        const newEmbed = EmbedBuilder.createGameEmbed('duotrigordle', '🟧 New Duotrigordle Puzzle!');
-        newEmbed.setDescription(
-          '32 words to solve!\n\n' +
-          'Launch the Activity to play today\'s puzzle. Use `/play` for details.'
-        );
-        await (channel as any).send({ embeds: [newEmbed] });
       }
 
       this.logger.info('Daily Duotrigordle puzzle message posted with recap');
