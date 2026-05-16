@@ -91,6 +91,7 @@ function renderGrids(grids) {
       }
       updateKeyboardStates(lastGridsData);
       renderNumberLine(lastGridsData);
+      document.getElementById('guess-input').focus();
     });
   });
 }
