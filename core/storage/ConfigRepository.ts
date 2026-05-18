@@ -151,30 +151,57 @@ export class ConfigRepository {
   }
 
   /**
-   * Set the designated channel for bot messages
+   * Set the designated channel for bot messages (per game type)
    */
-  async setChannelId(serverId: string, channelId: string): Promise<void> {
+  async setChannelId(serverId: string, channelId: string, gameType?: string): Promise<void> {
     try {
-      // Upsert: create config if it doesn't exist, otherwise just update channel_id
-      const existing = await this.getServerConfig(serverId);
-      if (!existing) {
-        const sql = `
-          INSERT INTO server_configs (server_id, channel_id)
-          VALUES ($1, $2)
-        `;
-        await this.db.query(sql, [serverId, channelId]);
+      if (gameType) {
+        // Store per-game channel in custom_settings.channels
+        const config = await this.getServerConfig(serverId);
+        if (!config) {
+          const sql = `
+            INSERT INTO server_configs (server_id, channel_id, custom_settings)
+            VALUES ($1, $2, $3)
+          `;
+          const settings = { channels: { [gameType]: channelId } };
+          await this.db.query(sql, [serverId, channelId, JSON.stringify(settings)]);
+        } else {
+          const settings = config.customSettings || {};
+          if (!settings.channels) settings.channels = {};
+          settings.channels[gameType] = channelId;
+          await this.updateCustomSettings(serverId, settings);
+        }
       } else {
-        const sql = `
-          UPDATE server_configs 
-          SET channel_id = $1, updated_at = CURRENT_TIMESTAMP
-          WHERE server_id = $2
-        `;
-        await this.db.query(sql, [channelId, serverId]);
+        // Legacy: set the shared channel_id field
+        const existing = await this.getServerConfig(serverId);
+        if (!existing) {
+          const sql = `
+            INSERT INTO server_configs (server_id, channel_id)
+            VALUES ($1, $2)
+          `;
+          await this.db.query(sql, [serverId, channelId]);
+        } else {
+          const sql = `
+            UPDATE server_configs 
+            SET channel_id = $1, updated_at = CURRENT_TIMESTAMP
+            WHERE server_id = $2
+          `;
+          await this.db.query(sql, [channelId, serverId]);
+        }
       }
     } catch (error) {
-      this.logger.error('Error setting channel ID:', { serverId, channelId, error });
+      this.logger.error('Error setting channel ID:', { serverId, channelId, gameType, error });
       throw error;
     }
+  }
+
+  /**
+   * Get the channel ID for a specific game type (falls back to shared channel_id)
+   */
+  getChannelForGame(config: ServerConfig, gameType: string): string | null {
+    const perGame = config.customSettings?.channels?.[gameType];
+    if (perGame) return perGame;
+    return config.channelId;
   }
 
   /**

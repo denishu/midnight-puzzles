@@ -98,8 +98,9 @@ export class DuotrigordleBot extends BaseBotApplication {
           const serverConfig = await this.configRepo.getServerConfig(guild.id);
           let channel: any = null;
 
-          if (serverConfig?.channelId) {
-            channel = guild.channels.cache.get(serverConfig.channelId);
+          const configuredChannelId = serverConfig ? this.configRepo.getChannelForGame(serverConfig, 'duotrigordle') : null;
+          if (configuredChannelId) {
+            channel = guild.channels.cache.get(configuredChannelId);
           }
           if (!channel) {
             channel = guild.systemChannel || guild.channels.cache.find(
@@ -305,7 +306,7 @@ export class DuotrigordleBot extends BaseBotApplication {
         return;
       }
 
-      await this.configRepo.setChannelId(guildId, channelId);
+      await this.configRepo.setChannelId(guildId, channelId, 'duotrigordle');
       await interaction.reply({ content: `✅ Daily puzzle messages will now be posted in <#${channelId}>`, ephemeral: true });
     } catch (error) {
       this.logger.error('Error in /setchannel:', error);

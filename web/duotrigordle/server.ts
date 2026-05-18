@@ -290,7 +290,11 @@ app.post('/game/complete', async (req, res) => {
     let channelId = req.body.channelId;
     if (serverId) {
       const config = await configRepo?.getServerConfig(serverId);
-      if (config?.channelId) channelId = config.channelId;
+      if (config) {
+        const gameChannel = config.customSettings?.channels?.duotrigordle;
+        if (gameChannel) channelId = gameChannel;
+        else if (config.channelId) channelId = config.channelId;
+      }
     }
     if (!channelId) { res.status(400).json({ error: 'no channel configured — use /setchannel' }); return; }
 
