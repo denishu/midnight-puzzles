@@ -66,7 +66,12 @@ function scheduleDailyCleanup() {
   console.log(`[cleanup] Next session purge in ${Math.round(msUntilMidnight / 60000)} minutes`);
 }
 
-async function getOrCreateSession(userId: string, username?: string, guildId?: string): Promise<string> {
+async function getOrCreateSession(userId: string, username?: string, guildId?: string): Promise<string | null> {
+  // Skip DB persistence for non-Discord users (localStorage fallback IDs)
+  if (userId === 'default' || userId.startsWith('local_')) {
+    return null;
+  }
+
   // Date rollover check
   const today = new Date().toISOString().split('T')[0]!;
   if (today !== sessionsDate) {
@@ -136,6 +141,13 @@ app.get('/game/state', async (req, res) => {
 
   try {
     const sessionId = await getOrCreateSession(userId, username, guildId);
+
+    if (!sessionId) {
+      // Non-Discord user — return empty state without persisting
+      res.json({ guessCount: 0, isComplete: false, guesses: [], thresholds: null });
+      return;
+    }
+
     const gameState = await semantleGame.getGameState(sessionId);
     const session = gameState.session;
     const guesses = (session.gameData.guesses || []).map((g: any) => ({
@@ -172,6 +184,10 @@ app.post('/game/guess', async (req, res) => {
 
   try {
     const sessionId = await getOrCreateSession(userId, username, guildId);
+    if (!sessionId) {
+      res.status(403).json({ isValid: false, feedback: 'Discord authentication required to play.' });
+      return;
+    }
     const result = await semantleGame.processGuess(sessionId, word);
 
     res.json({
@@ -197,6 +213,10 @@ app.get('/game/hint', async (req, res) => {
 
   try {
     const sessionId = await getOrCreateSession(userId, undefined, guildId);
+    if (!sessionId) {
+      res.json({ hint: null });
+      return;
+    }
     const hint = await semantleGame.getHint(sessionId);
     if (!hint) {
       res.json({ hint: null });
