@@ -281,7 +281,7 @@ function showGameOver(isWin, completedGrids, guessesUsed, shouldPost, gaveUp = f
 
   // Show word list card on win
   const wordsEl = document.getElementById('go-words');
-  if (isWin && lastTargetWords && lastTargetWords.length > 0) {
+  if (lastTargetWords && lastTargetWords.length > 0) {
     wordsEl.innerHTML = lastTargetWords.map((w, i) =>
       '<span class="go-word">' + (i + 1) + '. ' + w + '</span>'
     ).join('');
@@ -336,6 +336,7 @@ async function giveUp() {
   });
   const result = await resp.json();
   gameOver = true;
+  if (result.targetWords) lastTargetWords = result.targetWords;
   renderGrids(result.grids);
   renderNumberLine(result.grids);
   updateProgress(result);
