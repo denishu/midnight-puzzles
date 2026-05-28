@@ -188,6 +188,15 @@ app.post('/game/guess', async (req, res) => {
       res.status(403).json({ isValid: false, feedback: 'Discord authentication required to play.' });
       return;
     }
+
+    // Fix server_id if we have guild ID (handles cached sessions that missed it on creation)
+    if (guildId) {
+      const existingSession = await sessionRepo.getActiveSession(userId, 'semantle', new Date());
+      if (existingSession && existingSession.serverId === 'activity') {
+        await sessionRepo.updateServerId(existingSession.id, guildId);
+      }
+    }
+
     const result = await semantleGame.processGuess(sessionId, word);
 
     res.json({
