@@ -75,8 +75,9 @@ export class PuzzleGenerator {
 
     let attempt = 0;
     while (attempt < 500) {
-      // Pick a component weighted by size (bigger components more likely)
-      const compIdx = this.seededIndex(seed + attempt * 3, this.components.length);
+      // Pick a component: 75% chance for largest (Afro-Eurasia), 25% for others (Americas)
+      const roll = this.seededIndex(seed + attempt * 3, 4); // 0-3
+      const compIdx = roll === 0 ? (this.components.length > 1 ? 1 : 0) : 0;
       const component = this.components[compIdx]!;
 
       const i = this.seededIndex(seed + attempt, component.length);

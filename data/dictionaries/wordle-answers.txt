@@ -407,11 +407,8 @@ avian
 avine
 avion
 avise
-aviso
-avize
 avoid
 avows
-avyze
 await
 awake
 award
@@ -421,12 +418,9 @@ awash
 awato
 awave
 aways
-awdls
 aweel
-aweto
 awful
 awing
-awmry
 awned
 awner
 awoke
@@ -447,12 +441,10 @@ axmen
 axoid
 axone
 axons
-ayahs
 ayaya
 ayelp
 aygre
 ayins
-ayont
 ayres
 azans
 azide
@@ -463,9 +455,6 @@ azote
 azoth
 azuki
 azure
-azurn
-azury
-baals
 babas
 babel
 babes
