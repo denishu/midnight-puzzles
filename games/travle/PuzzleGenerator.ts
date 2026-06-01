@@ -70,8 +70,8 @@ export class PuzzleGenerator {
   }
 
   generateFromSeed(seed: number): TravlePuzzle {
-    const MIN_PATH = 3;
-    const MAX_PATH = 11;
+    const MIN_PATH = 4;
+    const MAX_PATH = 12;
 
     let attempt = 0;
     while (attempt < 500) {
@@ -94,7 +94,7 @@ export class PuzzleGenerator {
       const pathLen = path.length - 1;
 
       if (pathLen >= MIN_PATH && pathLen <= MAX_PATH) {
-        const maxGuesses = pathLen + Math.max(3, Math.floor(pathLen * 0.5));
+        const maxGuesses = pathLen + Math.max(4, Math.floor(pathLen * 0.5) + 1);
 
         this.logger.info(`Puzzle for seed ${seed}: ${start} → ${end} (${pathLen} steps, ${maxGuesses} max guesses)`);
 

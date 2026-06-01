@@ -2120,7 +2120,6 @@ leave
 ledge
 ledgy
 ledum
-leear
 leech
 leeks
 leeps
@@ -2269,7 +2268,6 @@ linos
 lints
 linty
 linum
-linux
 lions
 lipas
 lipes
@@ -2524,8 +2522,6 @@ lytes
 lythe
 lytic
 lytta
-maaed
-maare
 maars
 mabes
 macas
@@ -3774,7 +3770,6 @@ thane
 thang
 thank
 thans
-thanx
 tharm
 thars
 thaws
@@ -4025,9 +4020,7 @@ umble
 umbos
 umbra
 umbre
-umiac
 umiak
-umiaq
 ummah
 ummas
 ummed
