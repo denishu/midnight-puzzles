@@ -1,0 +1,29 @@
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="c1"><circle cx="128" cy="128" r="128"/></clipPath>
+    <linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7c3aed"/><stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <linearGradient id="p1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+  <g clip-path="url(#c1)">
+    <rect width="256" height="256" fill="url(#bg1)"/>
+    <g opacity="0.06">
+      <circle cx="40" cy="40" r="8" fill="#fff"/><circle cx="200" cy="60" r="10" fill="#fff"/>
+      <circle cx="60" cy="190" r="7" fill="#fff"/><circle cx="220" cy="200" r="9" fill="#fff"/>
+    </g>
+    <g transform="translate(128,125) rotate(15) scale(1.15)">
+      <path d="M-48,-48 L-8,-48 C-8,-48 -10,-66 0,-66 C10,-66 8,-48 8,-48 L48,-48
+        L48,-6 C48,-6 34,-8 34,0 C34,8 48,6 48,6 L48,48
+        L6,48 C6,48 8,64 0,64 C-8,64 -6,48 -6,48 L-48,48
+        L-48,8 C-48,8 -64,10 -64,0 C-64,-10 -48,-8 -48,-8 Z"
+        fill="url(#p1)" stroke="#fff" stroke-width="2.5" stroke-opacity="0.3"/>
+    </g>
+    <!-- S rendered as SVG path for universal compatibility -->
+    <text x="131" y="146" text-anchor="middle" font-family="'Segoe UI',Arial,sans-serif"
+      font-weight="900" font-size="70" fill="#7c3aed" opacity="0.85">S</text>
+  </g>
+  <circle cx="128" cy="128" r="125" fill="none" stroke="#fff" stroke-width="3" stroke-opacity="0.15"/>
+</svg>
