@@ -2634,9 +2634,6 @@ marcs
 mardy
 mares
 marge
-margs
-maria
-marid
 marka
 marks
 marle
@@ -3027,7 +3024,6 @@ quirk
 quite
 quota
 quote
-quoth
 rabbi
 rabid
 racer
@@ -3361,7 +3357,6 @@ solid
 solve
 sonar
 sonic
-sooth
 sooty
 sorry
 sound
@@ -3800,8 +3795,6 @@ thewy
 thick
 thief
 thigh
-thigs
-thilk
 thill
 thine
 thing
@@ -3809,10 +3802,8 @@ think
 thins
 thiol
 third
-thirl
 thoft
 thole
-tholi
 thong
 thorn
 thoro
@@ -3964,10 +3955,8 @@ twirl
 twirp
 twist
 twite
-twixt
 twoer
 twyer
-tyees
 tyers
 tying
 tyiyn
@@ -4850,7 +4839,6 @@ yules
 yummo
 yummy
 yumps
-yupon
 yuppy
 yurta
 yurts
