@@ -240,6 +240,14 @@ async function submitGuess() {
     return;
   }
 
+  // Detect puzzle reset (server has fewer guesses than our last known count)
+  const prevGuessCount = parseInt(document.getElementById('guesses-used').textContent) || 0;
+  if (result.guessesUsed < prevGuessCount) {
+    await loadState();
+    updateStatus('Daily puzzle has reset! Loading new puzzle...');
+    return;
+  }
+
   gameOver = result.isGameOver;
 
   renderGrids(result.grids);

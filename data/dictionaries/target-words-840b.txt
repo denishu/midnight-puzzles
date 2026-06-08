@@ -37,7 +37,6 @@ perils
 cemented
 shattering
 pseudo
-quasi
 pulsar
 coincided
 totality

@@ -202,6 +202,13 @@ async function submitGuess() {
     return;
   }
 
+  // Detect puzzle reset (server has fewer guesses than expected — date rolled over)
+  if (result.serverGuessCount !== undefined && result.serverGuessCount < guesses.length) {
+    await loadPuzzle();
+    updateStatus('Daily puzzle has reset! Loading new puzzle...');
+    return;
+  }
+
   guesses = result.guesses;
   guessesRemaining = result.guessesRemaining;
   gameOver = result.isGameOver;

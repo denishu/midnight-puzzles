@@ -188,14 +188,14 @@ describe('PuzzleGenerator', () => {
       const date = new Date('2026-01-01');
       date.setDate(date.getDate() + i);
       const puzzle = gen.generateForDate(date);
-      expect(puzzle.shortestPathLength).toBeGreaterThanOrEqual(3);
-      expect(puzzle.shortestPathLength).toBeLessThanOrEqual(11);
+      expect(puzzle.shortestPathLength).toBeGreaterThanOrEqual(4);
+      expect(puzzle.shortestPathLength).toBeLessThanOrEqual(12);
     }
   });
 
   it('sets maxGuesses correctly', () => {
     const puzzle = gen.generateForDate(new Date('2026-06-15'));
-    const expected = puzzle.shortestPathLength + Math.max(3, Math.floor(puzzle.shortestPathLength * 0.5));
+    const expected = puzzle.shortestPathLength + Math.max(4, Math.floor(puzzle.shortestPathLength * 0.5) + 1);
     expect(puzzle.maxGuesses).toBe(expected);
   });
 

@@ -199,6 +199,10 @@ app.post('/game/guess', async (req, res) => {
 
     const result = await semantleGame.processGuess(sessionId, word);
 
+    // Get the current session state to include server-side guess count
+    const currentState = await semantleGame.getGameState(sessionId);
+    const serverGuessCount = currentState.session.gameData.guesses?.length || 0;
+
     res.json({
       isValid: result.isValid,
       feedback: result.feedback,
@@ -207,6 +211,7 @@ app.post('/game/guess', async (req, res) => {
       rank: result.data?.rank,
       bestRank: result.data?.bestRank,
       targetWord: result.isComplete ? result.data?.result?.targetWord : undefined,
+      serverGuessCount,
     });
   } catch (e) {
     console.error('[guess] Error:', e);

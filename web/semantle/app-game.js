@@ -69,6 +69,14 @@ async function submitGuess() {
     return;
   }
 
+  // Detect puzzle reset (server has fewer guesses than frontend — date rolled over)
+  if (result.serverGuessCount !== undefined && result.serverGuessCount < guesses.length) {
+    // Puzzle changed — reload to get the new state
+    await loadState();
+    updateStatus('Daily puzzle has reset! Loading new puzzle...');
+    return;
+  }
+
   // Add to local guesses list
   guesses.push({
     word,

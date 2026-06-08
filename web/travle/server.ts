@@ -244,6 +244,7 @@ app.post('/game/guess', async (req, res) => {
     ...result,
     guesses: state.guesses,
     guessesRemaining: state.guessesRemaining,
+    serverGuessCount: state.guesses.length,
   });
 });
 
