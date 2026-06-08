@@ -85,6 +85,14 @@ const NAME_MAP = {
   'north macedonia': 'north macedonia',
   'czech republic': 'czechia',
   'vatican city': 'vatican',
+  'tanzania': 'united republic of tanzania',
+  'bahamas': 'the bahamas',
+  'gambia': 'the gambia',
+  'serbia': 'republic of serbia',
+  'south korea': 'republic of korea',
+  'north korea': 'dem. rep. korea',
+  'laos': 'lao pdr',
+  'brunei': 'brunei darussalam',
 };
 
 function resolveCountryName(name) {
