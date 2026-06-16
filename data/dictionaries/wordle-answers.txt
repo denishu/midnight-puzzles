@@ -310,7 +310,6 @@ arson
 artic
 artsy
 arums
-arvee
 asana
 ascon
 ascot
@@ -345,7 +344,6 @@ asura
 asway
 aswim
 asyla
-ataps
 ataxy
 atigi
 atilt
@@ -1729,7 +1727,6 @@ hogan
 hogen
 hoggs
 hoghs
-hohed
 hoick
 hoied
 hoiks
@@ -1739,7 +1736,6 @@ hoist
 hokas
 hoked
 hokes
-hokey
 hokis
 hokku
 hokum
@@ -1784,7 +1780,6 @@ hoofs
 hooka
 hooks
 hooky
-hooly
 hoons
 hoops
 hoord
@@ -1822,7 +1817,6 @@ hotel
 hoten
 hotly
 hotty
-houff
 houfs
 hough
 hound
@@ -1853,7 +1847,6 @@ hoyle
 hubby
 hucks
 hudna
-hudud
 huers
 huffs
 huffy
@@ -1960,7 +1953,6 @@ iglus
 ihram
 ikans
 ikats
-ikons
 ileac
 ileal
 ileum
@@ -2186,8 +2178,6 @@ lewis
 lexes
 lexis
 lezes
-lezza
-lezzy
 liana
 liane
 liang
@@ -2384,7 +2374,6 @@ loris
 lorry
 losed
 losel
-losen
 loser
 loses
 lossy
@@ -2401,7 +2390,6 @@ lotus
 loued
 lough
 louie
-louis
 louma
 lound
 louns
@@ -2428,7 +2416,6 @@ lownd
 lowne
 lowns
 lowps
-lowry
 lowse
 lowts
 loxed
@@ -2655,7 +2642,6 @@ mases
 mashy
 masks
 mason
-massa
 masse
 massy
 masts
@@ -3534,7 +3520,6 @@ takes
 takhi
 takin
 takis
-takky
 talak
 talaq
 talar
@@ -3621,7 +3606,6 @@ tatie
 tatou
 tatts
 tatty
-tatus
 taube
 tauld
 taunt
@@ -3746,7 +3730,6 @@ tetes
 teths
 tetra
 tetri
-teuch
 teugh
 tewed
 tewel
@@ -3786,7 +3769,6 @@ theow
 there
 therm
 these
-thesp
 theta
 thete
 thews
@@ -3988,7 +3970,6 @@ uhlan
 uhuru
 ukase
 ulama
-ulans
 ulcer
 ulema
 ulmin
@@ -4009,15 +3990,12 @@ umbos
 umbra
 umbre
 umiak
-ummah
-ummas
 ummed
 umped
 umphs
 umpie
 umpty
 umrah
-umras
 unais
 unapt
 unarm
@@ -4144,7 +4122,6 @@ urite
 urman
 urnal
 urned
-urped
 ursae
 ursid
 urson
@@ -4736,7 +4713,6 @@ xerus
 xylan
 xylem
 xylic
-xysti
 xysts
 yabba
 yabby
@@ -4781,7 +4757,6 @@ yetis
 yield
 yiked
 yikes
-yills
 yince
 yipes
 yippy
@@ -4818,7 +4793,6 @@ young
 yourn
 yours
 yourt
-youse
 youth
 yowed
 yowes
@@ -4830,7 +4804,6 @@ yucks
 yucky
 yufts
 yugas
-yuked
 yukes
 yukos
 yulan
