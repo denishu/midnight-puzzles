@@ -439,7 +439,6 @@ axmen
 axoid
 axone
 axons
-ayaya
 ayelp
 aygre
 ayins
@@ -654,7 +653,6 @@ below
 belts
 bemad
 bemas
-bemix
 bemud
 bench
 bends
@@ -1782,7 +1780,6 @@ hooks
 hooky
 hoons
 hoops
-hoord
 hoors
 hoosh
 hoots
@@ -2146,7 +2143,6 @@ lenes
 lengs
 lenis
 lenos
-lense
 lenti
 lento
 leone
@@ -2205,7 +2201,6 @@ lifes
 lifts
 ligan
 liger
-ligge
 light
 ligne
 liked
@@ -2466,8 +2461,6 @@ lured
 lurer
 lures
 lurex
-lurgi
-lurgy
 lurid
 lurks
 lurry
@@ -2544,7 +2537,6 @@ maids
 maiko
 maiks
 maile
-maill
 mails
 maims
 mains
@@ -2668,9 +2660,6 @@ mauts
 mauve
 mauzy
 maven
-mavie
-mavin
-mavis
 mawed
 mawks
 mawky
@@ -3603,7 +3592,6 @@ tater
 tates
 taths
 tatie
-tatou
 tatts
 tatty
 taube
@@ -3619,7 +3607,6 @@ tawai
 tawas
 tawed
 tawer
-tawie
 tawny
 tawse
 tawts
@@ -4042,7 +4029,6 @@ unity
 unjam
 unked
 unket
-unkid
 unlaw
 unlay
 unled
@@ -4597,7 +4583,6 @@ wisht
 wisps
 wispy
 wists
-witan
 witch
 wited
 wites
@@ -4666,7 +4651,6 @@ woxen
 wrack
 wrang
 wraps
-wrapt
 wrast
 wrate
 wrath
@@ -4759,7 +4743,6 @@ yiked
 yikes
 yince
 yipes
-yippy
 yirds
 yirks
 yirth
