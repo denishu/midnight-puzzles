@@ -78,21 +78,11 @@ async function initMap() {
 const NAME_MAP = {
   'united states': 'united states of america',
   'congo': 'republic of the congo',
-  'democratic republic of the congo': 'democratic republic of the congo',
-  'ivory coast': "côte d'ivoire",
-  'east timor': 'timor-leste',
-  'eswatini': 'eswatini',
-  'north macedonia': 'north macedonia',
-  'czech republic': 'czechia',
-  'vatican city': 'vatican',
   'tanzania': 'united republic of tanzania',
   'bahamas': 'the bahamas',
   'gambia': 'the gambia',
   'serbia': 'republic of serbia',
-  'south korea': 'republic of korea',
-  'north korea': 'dem. rep. korea',
-  'laos': 'lao pdr',
-  'brunei': 'brunei darussalam',
+  'czech republic': 'czechia',
 };
 
 function resolveCountryName(name) {

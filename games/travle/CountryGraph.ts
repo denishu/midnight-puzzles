@@ -21,7 +21,8 @@ export class CountryGraph {
     'central african republic': ['car'],
     'ivory coast': ["cote d'ivoire", 'côte d\'ivoire'],
     'south korea': ['korea', 'republic of korea'],
-    'north korea': ['dprk'],
+    'north korea': ['dprk', 'democratic peoples republic of korea'],
+    'laos': ['lao pdr', 'lao'],
     'czech republic': ['czechia'],
     'eswatini': ['swaziland'],
     'myanmar': ['burma'],
@@ -43,6 +44,7 @@ export class CountryGraph {
     'guinea-bissau': ['guinea bissau'],
     'bahamas': ['the bahamas'],
     'gambia': ['the gambia'],
+    'brunei': ['brunei darussalam'],
   };
 
   constructor() {
