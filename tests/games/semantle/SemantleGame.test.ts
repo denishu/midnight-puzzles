@@ -6,12 +6,19 @@ import { DailyPuzzleRepository } from '../../../core/storage/DailyPuzzleReposito
 import { DatabaseConnectionFactory } from '../../../core/storage/DatabaseConnection';
 import { MigrationManager } from '../../../core/storage/migrations/migrate';
 import { UserRepository } from '../../../core/storage/UserRepository';
+import { vectorDataAvailable } from '../../helpers/vectorData';
+
+// Skip in CI or when the 137MB vector file isn't present locally.
+const runVectors = vectorDataAvailable();
+const describeVectors = runVectors ? describe : describe.skip;
 
 let game: SemantleGame;
 let sessionRepo: GameStateRepository;
 let userRepo: UserRepository;
 
 beforeAll(async () => {
+  if (!runVectors) return;
+
   // Close any existing connection from other test suites
   await DatabaseConnectionFactory.close();
 
@@ -38,7 +45,7 @@ async function createTestSession(): Promise<string> {
   return session.id;
 }
 
-describe('SemantleGame', () => {
+describeVectors('SemantleGame', () => {
   describe('session management', () => {
     it('creates a new session with a target word', async () => {
       const userId = 'test_session_1';
@@ -113,7 +120,7 @@ describe('SemantleGame', () => {
       await game.processGuess(sessionId, 'river');
       await game.processGuess(sessionId, 'ocean');
 
-      const state2 = await game.getGameState(sessionId);
+      const _state2 = await game.getGameState(sessionId);
       // bestRank should be set if either word was ranked
       // (may or may not be ranked depending on target word)
     });
@@ -148,5 +155,6 @@ describe('SemantleGame', () => {
 });
 
 afterAll(async () => {
+  if (!runVectors) return;
   await DatabaseConnectionFactory.close();
 });

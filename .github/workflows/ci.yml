@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Lint, Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build (type-check)
+        run: npm run build
+
+      - name: Run tests
+        # Semantle's vector-dependent tests are skipped in CI because the
+        # 137MB GloVe vectors / precomputed rankings are not committed to git.
+        # All Travle, Duotrigordle, and core tests run normally.
+        run: npm test
+        env:
+          CI_SKIP_VECTOR_TESTS: "1"

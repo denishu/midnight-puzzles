@@ -1,4 +1,8 @@
 import { SemanticEngine } from '../../../games/semantle/SemanticEngine';
+import { vectorDataAvailable } from '../../helpers/vectorData';
+
+// Skip in CI or when the 137MB vector file isn't present locally.
+const describeVectors = vectorDataAvailable() ? describe : describe.skip;
 
 let engine: SemanticEngine;
 
@@ -7,7 +11,7 @@ beforeAll(async () => {
   await engine.initialize();
 }, 120000); // vectors take time to load
 
-describe('SemanticEngine', () => {
+describeVectors('SemanticEngine', () => {
   describe('vocabulary', () => {
     it('loads a large vocabulary', () => {
       expect(engine.getVocabularySize()).toBeGreaterThan(10000);
