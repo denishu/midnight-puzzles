@@ -40,7 +40,7 @@ export class MigrationManager {
 
   async applyMigration(migration: Migration): Promise<void> {
     try {
-      await this.db.transaction(async (client) => {
+      await this.db.transaction(async (_client) => {
         // For multi-statement SQL (like initial schema), use exec-style execution
         // Split carefully: only on semicolons that are NOT inside trigger BEGIN...END blocks
         const statements = this.splitStatements(migration.up);
@@ -77,7 +77,7 @@ export class MigrationManager {
       throw new Error(`Migration ${migration.version} does not support rollback`);
     }
 
-    await this.db.transaction(async (client) => {
+    await this.db.transaction(async (_client) => {
       // Rollback the migration
       await this.db.query(migration.down!);
       

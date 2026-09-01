@@ -1,6 +1,6 @@
 import { Logger } from '../../core/utils/Logger';
 import * as fsSync from 'fs';
-import * as fs from 'fs/promises';
+import * as readline from 'readline';
 import * as path from 'path';
 
 export interface WordSimilarity {
@@ -303,8 +303,7 @@ export class SemanticEngine {
 
   private async loadLegacyVectors(): Promise<void> {
     const filePath = path.join(DICT_DIR, 'semantic-vectors.txt');
-    const readline = require('readline');
-    const fileStream = require('fs').createReadStream(filePath);
+    const fileStream = fsSync.createReadStream(filePath);
     const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
 
     let count = 0;

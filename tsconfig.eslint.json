@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "core/**/*",
+    "games/**/*",
+    "bot/**/*",
+    "web/**/*.ts",
+    "tests/**/*"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

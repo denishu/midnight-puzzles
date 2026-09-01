@@ -5,12 +5,12 @@ import { Logger } from '../core/utils/Logger';
 import { CountryGraph } from '../games/travle/CountryGraph';
 import { TravleGame, TravleGameState } from '../games/travle/TravleGame';
 import { EmbedBuilder } from '../core/discord/EmbedBuilder';
-import { DatabaseConnectionFactory, DatabaseConnection } from '../core/storage/DatabaseConnection';
+import { DatabaseConnectionFactory } from '../core/storage/DatabaseConnection';
 import { UserRepository } from '../core/storage/UserRepository';
 import { GameStateRepository } from '../core/storage/GameStateRepository';
 import { ConfigRepository } from '../core/storage/ConfigRepository';
 import { MigrationManager } from '../core/storage/migrations/migrate';
-// @ts-ignore
+// @ts-expect-error node-cron has no type declarations
 import cron from 'node-cron';
 
 config();
@@ -75,7 +75,7 @@ export class TravleBot extends BaseBotApplication {
       }
 
       // Generate today's puzzle
-      const puzzle = this.travleGame.genPuzzle(today);
+      const _puzzle = this.travleGame.genPuzzle(today);
 
       // Clean up old DB sessions and in-memory cache before posting
       await this.sessionRepo.deleteOldSessions(7);

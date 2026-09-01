@@ -76,7 +76,7 @@ export class SemantleBot extends BaseBotApplication {
   }
 
   private scheduleDailyMessage(): void {
-    // @ts-ignore
+    // @ts-expect-error node-cron has no type declarations
     import('node-cron').then((cron: any) => {
       cron.default.schedule('1 0 * * *', () => {
         this.postDailyPuzzleMessage();
@@ -335,7 +335,6 @@ export class SemantleBot extends BaseBotApplication {
 
       const gameState = await this.semantleGame.getGameState(sessionId);
       const session = gameState.session;
-      const guesses: Array<{ word: string; rank?: number; similarity: number }> = session.gameData.guesses ?? [];
 
       if (!session.isComplete) {
         await interaction.editReply({ content: 'Finish the puzzle first before sharing results!' });

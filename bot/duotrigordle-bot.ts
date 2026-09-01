@@ -58,7 +58,7 @@ export class DuotrigordleBot extends BaseBotApplication {
   }
 
   private scheduleDailyMessage(): void {
-    // @ts-ignore
+    // @ts-expect-error node-cron has no type declarations
     import('node-cron').then((cron: any) => {
       cron.default.schedule('5 0 * * *', () => {
         this.postDailyPuzzleMessage();
@@ -85,7 +85,7 @@ export class DuotrigordleBot extends BaseBotApplication {
       }
 
       // Generate today's puzzle for the announcement
-      const puzzle = GridManager.generateDailyPuzzle(today, this.validator);
+      const _puzzle = GridManager.generateDailyPuzzle(today, this.validator);
 
       // Clean up old DB sessions and in-memory cache before posting
       await this.sessionRepo.deleteOldSessions(7);

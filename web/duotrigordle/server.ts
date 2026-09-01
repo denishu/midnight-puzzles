@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { config } from 'dotenv';
-import { GridManager, GRID_COUNT, MAX_GUESSES, DuotrigordlePuzzle } from '../../games/duotrigordle/GridManager';
+import { GridManager, MAX_GUESSES, DuotrigordlePuzzle } from '../../games/duotrigordle/GridManager';
 import { WordValidator } from '../../games/duotrigordle/WordValidator';
 import { ProgressTracker } from '../../games/duotrigordle/ProgressTracker';
 import { DatabaseConnectionFactory } from '../../core/storage/DatabaseConnection';

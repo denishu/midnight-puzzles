@@ -150,7 +150,7 @@ export class UserValidator {
    * Check if user has permission for admin commands
    * Can be extended with role-based permissions
    */
-  async hasAdminPermission(discordId: string, serverId: string): Promise<boolean> {
+  async hasAdminPermission(_discordId: string, _serverId: string): Promise<boolean> {
     // Basic implementation - can be extended with role checks
     // For now, this would need to be checked via Discord permissions
     // This is a placeholder for future permission system

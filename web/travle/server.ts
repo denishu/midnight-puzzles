@@ -3,7 +3,7 @@ import path from 'path';
 import { config } from 'dotenv';
 import { CountryGraph } from '../../games/travle/CountryGraph';
 import { TravleGame, TravleGameState } from '../../games/travle/TravleGame';
-import { DatabaseConnectionFactory, DatabaseConnection } from '../../core/storage/DatabaseConnection';
+import { DatabaseConnectionFactory } from '../../core/storage/DatabaseConnection';
 import { GameStateRepository } from '../../core/storage/GameStateRepository';
 import { UserRepository } from '../../core/storage/UserRepository';
 import { ConfigRepository } from '../../core/storage/ConfigRepository';

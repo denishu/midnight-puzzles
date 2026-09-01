@@ -59,3 +59,6 @@ data/dictionaries/rankings-840b.json
 
 # Kiro
 .kiro/
+
+# Claude
+.claude/

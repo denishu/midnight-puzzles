@@ -5,7 +5,6 @@ import {
   StringSelectMenuInteraction,
   ModalSubmitInteraction,
   InteractionType,
-  ComponentType
 } from 'discord.js';
 import { Logger } from '../utils/Logger';
 

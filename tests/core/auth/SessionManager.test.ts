@@ -1,6 +1,5 @@
 import { SessionManager } from '../../../core/auth/SessionManager';
 import { GameStateRepository } from '../../../core/storage/GameStateRepository';
-import { DatabaseConnection } from '../../../core/storage/DatabaseConnection';
 
 describe('SessionManager', () => {
   let sessionManager: SessionManager;

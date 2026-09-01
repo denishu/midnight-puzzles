@@ -2,9 +2,7 @@ import {
   EmbedBuilder as DiscordEmbedBuilder, 
   ActionRowBuilder, 
   ButtonBuilder, 
-  StringSelectMenuBuilder,
   ButtonStyle,
-  ComponentType,
   InteractionReplyOptions,
   MessageCreateOptions
 } from 'discord.js';

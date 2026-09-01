@@ -1,4 +1,4 @@
-import { EmbedBuilder as DiscordEmbedBuilder, ColorResolvable } from 'discord.js';
+import { EmbedBuilder as DiscordEmbedBuilder } from 'discord.js';
 
 export interface GameGridCell {
   value: string;
@@ -260,7 +260,7 @@ export class EmbedBuilder {
   /**
    * Create an embed for error messages
    */
-  static createError(title: string, message: string, gameType?: string): DiscordEmbedBuilder {
+  static createError(title: string, message: string, _gameType?: string): DiscordEmbedBuilder {
     const embed = new DiscordEmbedBuilder()
       .setTitle(`❌ ${title}`)
       .setDescription(message)
@@ -297,9 +297,6 @@ export class EmbedBuilder {
    * Create a summary of grid statuses for Duotrigordle
    */
   private static createGridSummary(grids: GameGrid[]): string {
-    const completed = grids.filter(g => g.isComplete).length;
-    const total = grids.length;
-    
     // Create a visual representation of completed vs incomplete grids
     const gridIcons = grids.map(grid => grid.isComplete ? '✅' : '⬜').join('');
     

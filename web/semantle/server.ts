@@ -4,7 +4,6 @@ import { config } from 'dotenv';
 import { SemantleGame } from '../../games/semantle/SemantleGame';
 import { SemanticEngine } from '../../games/semantle/SemanticEngine';
 import { SessionManager } from '../../core/auth/SessionManager';
-import { GameSessionFactory } from '../../core/auth/GameSessionFactory';
 import { DatabaseConnectionFactory } from '../../core/storage/DatabaseConnection';
 import { GameStateRepository } from '../../core/storage/GameStateRepository';
 import { DailyPuzzleRepository } from '../../core/storage/DailyPuzzleRepository';
@@ -79,7 +78,7 @@ async function getOrCreateSession(userId: string, username?: string, guildId?: s
     sessionsDate = today;
   }
 
-  let sessionId = userSessions.get(userId);
+  const sessionId = userSessions.get(userId);
   if (sessionId) return sessionId;
 
   // Ensure user exists

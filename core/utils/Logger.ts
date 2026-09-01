@@ -10,7 +10,7 @@ export class Logger {
         winston.format.timestamp(),
         winston.format.errors({ stack: true }),
         winston.format.json(),
-        winston.format.printf(({ timestamp, level, message, context: ctx, ...meta }) => {
+        winston.format.printf(({ timestamp, level, message, context: _ctx, ...meta }) => {
           return `${timestamp} [${level.toUpperCase()}] [${context}]: ${message} ${
             Object.keys(meta).length ? JSON.stringify(meta) : ''
           }`;
