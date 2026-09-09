@@ -58,7 +58,9 @@ data/dictionaries/rankings-840b.json
 .dockerignore
 
 # Kiro
-.kiro/
+.kiro/*
+!.kiro/steering/
+.kiro/specs/
 
 # Claude
 .claude/
