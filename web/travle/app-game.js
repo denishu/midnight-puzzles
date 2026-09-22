@@ -1,6 +1,16 @@
 // Travle Frontend — talks to /game endpoints
 
-import { initDiscord, getDiscordUser, getDiscordChannelId, getDiscordGuildId } from './dist/discord-sdk.js';
+import { initDiscord, getDiscordUser, getDiscordChannelId, getDiscordGuildId, getSessionToken } from './dist/discord-sdk.js';
+
+// Build headers for /game requests, including the verified session token (JWT)
+// when authenticated via Discord. The server reads identity from this token
+// rather than the ?id= query param.
+function authHeaders(extra) {
+  const headers = Object.assign({}, extra || {});
+  const token = getSessionToken();
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  return headers;
+}
 
 const GEOJSON_URL = '/game/geojson';
 
@@ -145,7 +155,7 @@ function getSessionParam() {
 
 // --- API calls ---
 async function loadPuzzle() {
-  const resp = await fetch('/game/puzzle' + getSessionParam());
+  const resp = await fetch('/game/puzzle' + getSessionParam(), { headers: authHeaders() });
   const data = await resp.json();
   puzzle = data;
   guesses = data.guesses || [];
@@ -190,7 +200,7 @@ async function submitGuess() {
 
   const resp = await fetch('/game/guess' + getSessionParam(), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ country, username: getDiscordUser()?.username })
   });
   const result = await resp.json();
@@ -286,7 +296,7 @@ function showGameOver(isWin, feedback, winningPath) {
   if (discordChannelId || discordGuildId) {
     fetch('/game/complete', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ channelId: discordChannelId, serverId: discordGuildId, message: shareText }),
     }).then(r => {
       console.log('Post results response:', r.status);
@@ -387,7 +397,7 @@ window.toggleInfo = toggleInfo;
 
 async function requestHint() {
   if (gameOver) return;
-  const resp = await fetch('/game/hint' + getSessionParam());
+  const resp = await fetch('/game/hint' + getSessionParam(), { headers: authHeaders() });
   const data = await resp.json();
   if (!data.hint) {
     updateStatus('No hint available');

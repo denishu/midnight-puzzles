@@ -1,12 +1,22 @@
 // Semantle Frontend — talks to /game endpoints
 
-import { initDiscord, getDiscordUser, getDiscordChannelId, getDiscordGuildId } from './dist/discord-sdk.js';
+import { initDiscord, getDiscordUser, getDiscordChannelId, getDiscordGuildId, getSessionToken } from './dist/discord-sdk.js';
 
 let sessionUserId = null;
 let discordChannelId = null;
 let discordGuildId = null;
 let guesses = [];
 let gameOver = false;
+
+// Build headers for /game requests, including the verified session token (JWT)
+// when authenticated via Discord. The server reads identity from this token
+// rather than the ?id= query param.
+function authHeaders(extra) {
+  const headers = Object.assign({}, extra || {});
+  const token = getSessionToken();
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  return headers;
+}
 
 function getSessionParam() {
   if (sessionUserId) {
@@ -26,7 +36,7 @@ function getSessionParam() {
 async function loadState() {
   const user = getDiscordUser();
   const usernameParam = user ? '&username=' + encodeURIComponent(user.username) : '';
-  const resp = await fetch('/game/state' + getSessionParam() + usernameParam);
+  const resp = await fetch('/game/state' + getSessionParam() + usernameParam, { headers: authHeaders() });
   const data = await resp.json();
   guesses = data.guesses || [];
   gameOver = data.isComplete;
@@ -59,7 +69,7 @@ async function submitGuess() {
 
   const resp = await fetch('/game/guess' + getSessionParam(), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ word, username: getDiscordUser()?.username }),
   });
   const result = await resp.json();
@@ -175,7 +185,7 @@ function showGameOver(targetWord, guessCount, shouldPost) {
     const shareText = '**' + username + '** solved today\'s Semantle in **' + guessCount + '** guesses!' + bestText;
     fetch('/game/complete', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ channelId: discordChannelId, serverId: discordGuildId, message: shareText }),
     }).catch(e => console.error('Failed to post results:', e));
   }
@@ -192,7 +202,7 @@ document.getElementById('guess-input').addEventListener('keydown', (e) => {
 });
 document.getElementById('submit-btn').addEventListener('click', submitGuess);
 document.getElementById('hint-btn').addEventListener('click', async () => {
-  const resp = await fetch('/game/hint' + getSessionParam());
+  const resp = await fetch('/game/hint' + getSessionParam(), { headers: authHeaders() });
   const data = await resp.json();
   if (data.hint) {
     document.getElementById('guess-input').value = data.hint;

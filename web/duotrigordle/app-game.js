@@ -1,6 +1,6 @@
 // Duotrigordle Frontend — talks to /game endpoints
 
-import { initDiscord, getDiscordUser, getDiscordChannelId, getDiscordGuildId } from './dist/discord-sdk.js';
+import { initDiscord, getDiscordUser, getDiscordChannelId, getDiscordGuildId, getSessionToken } from './dist/discord-sdk.js';
 
 let sessionUserId = null;
 let discordChannelId = null;
@@ -8,6 +8,16 @@ let discordGuildId = null;
 let gameOver = false;
 let currentInput = '';
 let lastTargetWords = null;
+
+// Build headers for /game requests, including the verified session token (JWT)
+// when authenticated via Discord. The server reads identity from this token
+// rather than the ?id= query param.
+function authHeaders(extra) {
+  const headers = Object.assign({}, extra || {});
+  const token = getSessionToken();
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  return headers;
+}
 
 // Keyboard letter states: best status across all grids
 const letterStates = {};
@@ -200,7 +210,7 @@ function buildKeyboard() {
 // --- API calls ---
 
 async function loadState() {
-  const resp = await fetch('/game/state' + getSessionParam());
+  const resp = await fetch('/game/state' + getSessionParam(), { headers: authHeaders() });
   const data = await resp.json();
   gameOver = data.isGameOver;
 
@@ -230,7 +240,7 @@ async function submitGuess() {
 
   const resp = await fetch('/game/guess' + getSessionParam(), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ word, username: getDiscordUser()?.username }),
   });
   const result = await resp.json();
@@ -313,7 +323,7 @@ function showGameOver(isWin, completedGrids, guessesUsed, shouldPost, gaveUp = f
 
     fetch('/game/complete', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ channelId: discordChannelId, serverId: discordGuildId, message: shareText }),
     }).catch(e => console.error('Failed to post results:', e));
   }
@@ -339,7 +349,7 @@ async function giveUp() {
   // Tell the server to end the game
   const resp = await fetch('/game/give-up' + getSessionParam(), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ username: getDiscordUser()?.username }),
   });
   const result = await resp.json();

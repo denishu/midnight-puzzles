@@ -11,6 +11,7 @@ let discordSdk = null;
 let currentUser = null;
 let channelId = null;
 let guildId = null;
+let sessionToken = null;
 
 /**
  * Initialize the Discord SDK and authenticate the user.
@@ -46,8 +47,12 @@ export async function initDiscord() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code }),
     });
-    const { access_token } = await tokenResp.json();
+    const tokenData = await tokenResp.json();
+    const { access_token } = tokenData;
     if (!access_token) throw new Error('Token exchange failed');
+    // Our server-verified session token — sent as a Bearer token on every
+    // /game request so the server never has to trust a client-supplied id.
+    sessionToken = tokenData.sessionToken || null;
     console.log('Got access token');
 
     // ACK — authenticate with Discord, get user identity
@@ -69,6 +74,12 @@ export async function initDiscord() {
 /** Get the authenticated Discord user, or null if not in an Activity */
 export function getDiscordUser() {
   return currentUser;
+}
+
+/** Get the server-issued session token (signed JWT) for Authorization headers,
+ * or null if not authenticated via Discord. */
+export function getSessionToken() {
+  return sessionToken;
 }
 
 /** Get the channel ID the Activity was launched from */
