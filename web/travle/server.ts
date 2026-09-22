@@ -8,6 +8,7 @@ import { GameStateRepository } from '../../core/storage/GameStateRepository';
 import { UserRepository } from '../../core/storage/UserRepository';
 import { ConfigRepository } from '../../core/storage/ConfigRepository';
 import { MigrationManager } from '../../core/storage/migrations/migrate';
+import { verifyDiscordToken, issueSessionToken, authMiddleware, resolveUserId } from '../../core/auth/ActivityAuth';
 
 config();
 
@@ -158,6 +159,9 @@ app.use('/game', (_req, res, next) => {
   next();
 });
 
+// Verify session JWT (if present) and attach req.userId. Never trusts ?id=.
+app.use('/game', authMiddleware);
+
 // Discord OAuth token exchange (for Activity)
 app.post('/game/discord/token', async (req, res) => {
   const { code } = req.body;
@@ -183,7 +187,17 @@ app.post('/game/discord/token', async (req, res) => {
     }
 
     const { access_token } = await response.json() as any;
-    res.json({ access_token });
+
+    // Verify the token with Discord to obtain the REAL user id, then issue our
+    // own signed session token for the client to send as a Bearer token.
+    const identity = await verifyDiscordToken(access_token);
+    if (!identity) {
+      res.status(401).json({ error: 'identity verification failed' });
+      return;
+    }
+    const sessionToken = issueSessionToken(identity);
+
+    res.json({ access_token, sessionToken });
   } catch (e) {
     console.error('Token exchange failed:', e);
     res.status(500).json({ error: 'token exchange failed' });
@@ -208,7 +222,7 @@ app.get('/game/geojson', async (_req, res) => {
 
 // Get today's puzzle
 app.get('/game/puzzle', async (req, res) => {
-  const sessionId = (req.query.id as string) || 'default';
+  const sessionId = resolveUserId(req);
   console.log('[session] puzzle request from:', sessionId);
   const state = await getSession(sessionId);
   res.json({
@@ -226,9 +240,10 @@ app.get('/game/puzzle', async (req, res) => {
 
 // Submit a guess
 app.post('/game/guess', async (req, res) => {
-  const sessionId = (req.query.id as string) || 'default';
+  const sessionId = resolveUserId(req);
   const guildId = req.query.guildId as string | undefined;
-  const { country, username } = req.body;
+  const { country } = req.body;
+  const username = req.authUsername ?? req.body.username;
   console.log('[guess]', sessionId, country);
   if (!country) { res.status(400).json({ error: 'country required' }); return; }
 
@@ -250,7 +265,7 @@ app.post('/game/guess', async (req, res) => {
 
 // Get a hint: reveal an unguessed country on the cheapest path
 app.get('/game/hint', async (req, res) => {
-  const sessionId = (req.query.id as string) || 'default';
+  const sessionId = resolveUserId(req);
   const state = await getSession(sessionId);
 
   if (state.isComplete) {
@@ -351,7 +366,7 @@ app.post('/game/complete', async (req, res) => {
 
 // Reset session
 app.post('/game/reset', async (req, res) => {
-  const sessionId = (req.query.id as string) || 'default';
+  const sessionId = resolveUserId(req);
   sessions.delete(sessionId);
   const state = await getSession(sessionId);
   res.json({

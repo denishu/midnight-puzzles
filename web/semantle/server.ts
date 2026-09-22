@@ -4,6 +4,7 @@ import { config } from 'dotenv';
 import { SemantleGame } from '../../games/semantle/SemantleGame';
 import { SemanticEngine } from '../../games/semantle/SemanticEngine';
 import { SessionManager } from '../../core/auth/SessionManager';
+import { verifyDiscordToken, issueSessionToken, authMiddleware, resolveUserId } from '../../core/auth/ActivityAuth';
 import { DatabaseConnectionFactory } from '../../core/storage/DatabaseConnection';
 import { GameStateRepository } from '../../core/storage/GameStateRepository';
 import { DailyPuzzleRepository } from '../../core/storage/DailyPuzzleRepository';
@@ -99,6 +100,9 @@ app.use('/game', (_req, res, next) => {
   next();
 });
 
+// Verify session JWT (if present) and attach req.userId. Never trusts ?id=.
+app.use('/game', authMiddleware);
+
 // Discord OAuth token exchange
 app.post('/game/discord/token', async (req, res) => {
   const { code } = req.body;
@@ -124,7 +128,18 @@ app.post('/game/discord/token', async (req, res) => {
     }
 
     const { access_token } = await response.json() as any;
-    res.json({ access_token });
+
+    // Verify the token with Discord to obtain the REAL user id, then issue our
+    // own signed session token. The client sends this back as a Bearer token;
+    // endpoints trust it instead of a client-supplied ?id=.
+    const identity = await verifyDiscordToken(access_token);
+    if (!identity) {
+      res.status(401).json({ error: 'identity verification failed' });
+      return;
+    }
+    const sessionToken = issueSessionToken(identity);
+
+    res.json({ access_token, sessionToken });
   } catch (e) {
     console.error('Token exchange failed:', e);
     res.status(500).json({ error: 'token exchange failed' });
@@ -133,8 +148,8 @@ app.post('/game/discord/token', async (req, res) => {
 
 // Get current game state
 app.get('/game/state', async (req, res) => {
-  const userId = (req.query.id as string) || 'default';
-  const username = req.query.username as string | undefined;
+  const userId = resolveUserId(req);
+  const username = req.authUsername ?? (req.query.username as string | undefined);
   const guildId = req.query.guildId as string | undefined;
   console.log('[session] state request from:', userId);
 
@@ -175,9 +190,10 @@ app.get('/game/state', async (req, res) => {
 
 // Submit a guess
 app.post('/game/guess', async (req, res) => {
-  const userId = (req.query.id as string) || 'default';
+  const userId = resolveUserId(req);
   const guildId = req.query.guildId as string | undefined;
-  const { word, username } = req.body;
+  const { word } = req.body;
+  const username = req.authUsername ?? req.body.username;
   console.log('[guess]', userId, word);
   if (!word) { res.status(400).json({ error: 'word required' }); return; }
 
@@ -220,7 +236,7 @@ app.post('/game/guess', async (req, res) => {
 
 // Get a hint
 app.get('/game/hint', async (req, res) => {
-  const userId = (req.query.id as string) || 'default';
+  const userId = resolveUserId(req);
   const guildId = req.query.guildId as string | undefined;
   console.log('[hint]', userId);
 
@@ -293,7 +309,7 @@ app.post('/game/complete', async (req, res) => {
 
 // Reset session (for testing)
 app.post('/game/reset', async (req, res) => {
-  const userId = (req.query.id as string) || 'default';
+  const userId = resolveUserId(req);
   console.log('[reset]', userId);
   userSessions.delete(userId);
   // Delete from DB
