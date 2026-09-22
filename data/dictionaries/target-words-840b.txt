@@ -43,7 +43,6 @@ totality
 blackmail
 homeostasis
 seminar
-adjudicate
 armory
 misty
 subliminal
@@ -105,7 +104,6 @@ story
 search
 large
 together
-came
 someone
 others
 anything
@@ -1427,7 +1425,6 @@ mortgage
 magazine
 presence
 spread
-yeah
 auto
 minimum
 parking
