@@ -10,11 +10,14 @@ import { UserRepository } from '../../core/storage/UserRepository';
 import { ConfigRepository } from '../../core/storage/ConfigRepository';
 import { MigrationManager } from '../../core/storage/migrations/migrate';
 import { verifyDiscordToken, issueSessionToken, authMiddleware, resolveUserId } from '../../core/auth/ActivityAuth';
+import { rateLimit } from '../../core/auth/RateLimit';
 
 config();
 
 const app = express();
 app.use(express.json());
+// Trust the reverse proxy so req.ip reflects the real client (rate-limit key).
+app.set('trust proxy', 1);
 
 // --- Game setup ---
 let validator: WordValidator;
@@ -206,6 +209,10 @@ app.use('/game', (_req, res, next) => {
 
 // Verify session JWT (if present) and attach req.userId. Never trusts ?id=.
 app.use('/game', authMiddleware);
+
+// Rate limiting (keyed per verified user, IP fallback for anonymous play).
+app.use('/game', rateLimit({ maxRequests: 120, windowMs: 60_000, bucket: 'duotri-all' }));
+app.use(['/game/guess', '/game/give-up'], rateLimit({ maxRequests: 45, windowMs: 60_000, bucket: 'duotri-play' }));
 
 // Discord OAuth token exchange (for Activity)
 app.post('/game/discord/token', async (req, res) => {

@@ -54,10 +54,15 @@ daily session or spoofing a results post — no PII/financial exposure. Not an
 emergency, but a real, textbook authz bug.
 </details>
 
-### 2. Rate limiting on the web API
-The bot path has a `UserValidator` with rate limiting; the Express endpoints have
-none. `/game/guess` hits the semantic engine + DB every call. Reuse `UserValidator`
-or add `express-rate-limit` on the game routes.
+### 2. Rate limiting on the web API — ✅ DONE
+Added `core/auth/RateLimit.ts`: a fixed-window limiter (same algorithm as
+`UserValidator`) as Express middleware, keyed per verified `req.userId` with an
+IP fallback for anonymous/local play. Wired into all three servers after
+`authMiddleware`: a general cap on `/game` plus a tighter cap on the expensive
+guess/hint routes. Returns HTTP 429 with `Retry-After` + `X-RateLimit-*`
+headers. Counter lives behind a `RateLimitStore` interface (in-memory now; swap
+to Redis for multi-instance — see the scaling note in the module). Servers set
+`trust proxy` so `req.ip` is accurate. Covered by `RateLimit.test.ts`.
 
 ### 3. Fail-fast config + input validation
 - No startup check that required env vars exist (`SEMANTLE_CLIENT_SECRET`, bot

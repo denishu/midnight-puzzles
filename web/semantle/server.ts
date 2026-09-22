@@ -5,6 +5,7 @@ import { SemantleGame } from '../../games/semantle/SemantleGame';
 import { SemanticEngine } from '../../games/semantle/SemanticEngine';
 import { SessionManager } from '../../core/auth/SessionManager';
 import { verifyDiscordToken, issueSessionToken, authMiddleware, resolveUserId } from '../../core/auth/ActivityAuth';
+import { rateLimit } from '../../core/auth/RateLimit';
 import { DatabaseConnectionFactory } from '../../core/storage/DatabaseConnection';
 import { GameStateRepository } from '../../core/storage/GameStateRepository';
 import { DailyPuzzleRepository } from '../../core/storage/DailyPuzzleRepository';
@@ -16,6 +17,9 @@ config();
 
 const app = express();
 app.use(express.json());
+// Trust the reverse proxy so req.ip reflects the real client (used as the
+// rate-limit key for anonymous/local play behind Discord's proxy / nginx).
+app.set('trust proxy', 1);
 
 // --- Game setup ---
 let semantleGame: SemantleGame;
@@ -102,6 +106,12 @@ app.use('/game', (_req, res, next) => {
 
 // Verify session JWT (if present) and attach req.userId. Never trusts ?id=.
 app.use('/game', authMiddleware);
+
+// Rate limiting (keyed per verified user, IP fallback for anonymous play).
+// General cap across all /game routes, plus a tighter cap on the expensive
+// guess/hint routes that hit the semantic engine + DB.
+app.use('/game', rateLimit({ maxRequests: 120, windowMs: 60_000, bucket: 'semantle-all' }));
+app.use(['/game/guess', '/game/hint'], rateLimit({ maxRequests: 30, windowMs: 60_000, bucket: 'semantle-play' }));
 
 // Discord OAuth token exchange
 app.post('/game/discord/token', async (req, res) => {

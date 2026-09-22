@@ -7,3 +7,4 @@ export * from './SessionManager';
 export * from './GameSessionFactory';
 export * from './UserValidator';
 export * from './ActivityAuth';
+export * from './RateLimit';
