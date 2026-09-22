@@ -48,6 +48,7 @@
     "discord.js": "^14.14.1",
     "dotenv": "^16.3.1",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.2",
     "leaflet": "^1.9.4",
     "node-cron": "^3.0.3",
     "pg": "^8.11.3",
@@ -57,6 +58,7 @@
   },
   "devDependencies": {
     "@types/jest": "^29.5.8",
+    "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20.10.5",
     "@types/pg": "^8.10.9",
     "@types/sqlite3": "^3.1.11",

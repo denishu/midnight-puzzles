@@ -6,3 +6,4 @@ export * from './Game.interface';
 export * from './SessionManager';
 export * from './GameSessionFactory';
 export * from './UserValidator';
+export * from './ActivityAuth';
