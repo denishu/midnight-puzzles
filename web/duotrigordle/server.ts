@@ -11,6 +11,8 @@ import { ConfigRepository } from '../../core/storage/ConfigRepository';
 import { MigrationManager } from '../../core/storage/migrations/migrate';
 import { verifyDiscordToken, issueSessionToken, authMiddleware, resolveUserId } from '../../core/auth/ActivityAuth';
 import { rateLimit } from '../../core/auth/RateLimit';
+import { validateConfigOrExit } from '../../core/utils/ConfigValidator';
+import { validateWordleGuess } from '../../core/utils/InputValidator';
 
 config();
 
@@ -271,7 +273,9 @@ app.post('/game/guess', async (req, res) => {
   const { word } = req.body;
   const username = req.authUsername ?? req.body.username;
   console.log('[guess]', userId, word);
-  if (!word) { res.status(400).json({ error: 'word required' }); return; }
+  const validation = validateWordleGuess(word);
+  if (!validation.ok) { res.status(400).json({ isValid: false, error: validation.error }); return; }
+  const cleanWord = validation.value!;
 
   const session = await getSession(userId);
 
@@ -280,7 +284,7 @@ app.post('/game/guess', async (req, res) => {
     return;
   }
 
-  const result = session.gridManager.applyGuess(word);
+  const result = session.gridManager.applyGuess(cleanWord);
 
   if (!result.isValid) {
     res.json({ isValid: false, error: result.error });
@@ -380,6 +384,12 @@ app.post('/game/reset', async (req, res) => {
 });
 
 // --- Start ---
+// Fail fast if required config is missing (before binding the port).
+validateConfigOrExit(
+  ['DUOTRIGORDLE_CLIENT_ID', 'DUOTRIGORDLE_CLIENT_SECRET', 'DUOTRIGORDLE_BOT_TOKEN'],
+  'duotrigordle-web'
+);
+
 app.use(express.static(path.resolve(process.cwd(), 'web/duotrigordle')));
 
 const PORT = process.env.DUOTRIGORDLE_PORT || 3003;

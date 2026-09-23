@@ -3,3 +3,5 @@ export * from './Logger';
 export * from './ErrorHandler';
 export * from './Validators';
 export * from './DateUtils';
+export * from './ConfigValidator';
+export * from './InputValidator';

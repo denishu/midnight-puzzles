@@ -64,11 +64,16 @@ headers. Counter lives behind a `RateLimitStore` interface (in-memory now; swap
 to Redis for multi-instance — see the scaling note in the module). Servers set
 `trust proxy` so `req.ip` is accurate. Covered by `RateLimit.test.ts`.
 
-### 3. Fail-fast config + input validation
-- No startup check that required env vars exist (`SEMANTLE_CLIENT_SECRET`, bot
-  tokens, etc.) — a missing secret silently fails at runtime. Add a boot-time assert
-  that fails fast.
-- Guess input isn't length/charset-validated before hitting the engine.
+### 3. Fail-fast config + input validation — ✅ DONE
+- `core/utils/ConfigValidator.ts` (`requireEnv` / `validateConfigOrExit`): each
+  web server asserts its required env vars (`<GAME>_CLIENT_ID`,
+  `<GAME>_CLIENT_SECRET`, `<GAME>_BOT_TOKEN`) at boot and exits with a clear
+  message listing all missing ones, before binding the port.
+- `core/utils/InputValidator.ts` (`validateGuessText` / `validateWordleGuess`):
+  guesses are length/charset-validated at the HTTP boundary before reaching the
+  engine — free-text (Semantle/Travle) allows Unicode letters + name
+  punctuation up to 60 chars; Duotrigordle requires exactly 5 letters.
+- Covered by `ConfigValidator.test.ts` and `InputValidator.test.ts`.
 
 ---
 

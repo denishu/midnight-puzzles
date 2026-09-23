@@ -6,6 +6,8 @@ import { SemanticEngine } from '../../games/semantle/SemanticEngine';
 import { SessionManager } from '../../core/auth/SessionManager';
 import { verifyDiscordToken, issueSessionToken, authMiddleware, resolveUserId } from '../../core/auth/ActivityAuth';
 import { rateLimit } from '../../core/auth/RateLimit';
+import { validateConfigOrExit } from '../../core/utils/ConfigValidator';
+import { validateGuessText } from '../../core/utils/InputValidator';
 import { DatabaseConnectionFactory } from '../../core/storage/DatabaseConnection';
 import { GameStateRepository } from '../../core/storage/GameStateRepository';
 import { DailyPuzzleRepository } from '../../core/storage/DailyPuzzleRepository';
@@ -205,7 +207,9 @@ app.post('/game/guess', async (req, res) => {
   const { word } = req.body;
   const username = req.authUsername ?? req.body.username;
   console.log('[guess]', userId, word);
-  if (!word) { res.status(400).json({ error: 'word required' }); return; }
+  const validation = validateGuessText(word);
+  if (!validation.ok) { res.status(400).json({ error: validation.error }); return; }
+  const cleanWord = validation.value!;
 
   try {
     const sessionId = await getOrCreateSession(userId, username, guildId);
@@ -222,7 +226,7 @@ app.post('/game/guess', async (req, res) => {
       }
     }
 
-    const result = await semantleGame.processGuess(sessionId, word);
+    const result = await semantleGame.processGuess(sessionId, cleanWord);
 
     // Get the current session state to include server-side guess count
     const currentState = await semantleGame.getGameState(sessionId);
@@ -329,6 +333,12 @@ app.post('/game/reset', async (req, res) => {
 });
 
 // --- Start ---
+// Fail fast if required config is missing (before binding the port).
+validateConfigOrExit(
+  ['SEMANTLE_CLIENT_ID', 'SEMANTLE_CLIENT_SECRET', 'SEMANTLE_BOT_TOKEN'],
+  'semantle-web'
+);
+
 app.use(express.static(path.resolve(process.cwd(), 'web/semantle')));
 
 const PORT = process.env.SEMANTLE_PORT || 3001;

@@ -10,6 +10,8 @@ import { ConfigRepository } from '../../core/storage/ConfigRepository';
 import { MigrationManager } from '../../core/storage/migrations/migrate';
 import { verifyDiscordToken, issueSessionToken, authMiddleware, resolveUserId } from '../../core/auth/ActivityAuth';
 import { rateLimit } from '../../core/auth/RateLimit';
+import { validateConfigOrExit } from '../../core/utils/ConfigValidator';
+import { validateGuessText } from '../../core/utils/InputValidator';
 
 config();
 
@@ -252,10 +254,12 @@ app.post('/game/guess', async (req, res) => {
   const { country } = req.body;
   const username = req.authUsername ?? req.body.username;
   console.log('[guess]', sessionId, country);
-  if (!country) { res.status(400).json({ error: 'country required' }); return; }
+  const validation = validateGuessText(country);
+  if (!validation.ok) { res.status(400).json({ error: validation.error }); return; }
+  const cleanCountry = validation.value!;
 
   const state = await getSession(sessionId);
-  const result = travleGame.guess(state, country);
+  const result = travleGame.guess(state, cleanCountry);
 
   // Save to DB on every guess (enables cross-context resumption)
   if (sessionId !== 'default' && !sessionId.startsWith('local_')) {
@@ -387,6 +391,12 @@ app.post('/game/reset', async (req, res) => {
 });
 
 // --- Start ---
+// Fail fast if required config is missing (before binding the port).
+validateConfigOrExit(
+  ['TRAVLE_CLIENT_ID', 'TRAVLE_CLIENT_SECRET', 'TRAVLE_BOT_TOKEN'],
+  'travle-web'
+);
+
 // Serve static files AFTER API routes so /api/* takes priority
 app.use(express.static(path.resolve(process.cwd(), 'web/travle')));
 
