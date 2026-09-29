@@ -1,9 +1,9 @@
 import express from 'express';
 import path from 'path';
 import { config } from 'dotenv';
-import { GridManager, MAX_GUESSES, DuotrigordlePuzzle } from '../../games/duotrigordle/GridManager';
 import { WordValidator } from '../../games/duotrigordle/WordValidator';
-import { ProgressTracker } from '../../games/duotrigordle/ProgressTracker';
+import { DuotrigordleGameSession, DuotrigordleLiveSession } from '../../games/duotrigordle/DuotrigordleGameSession';
+import { SessionManager } from '../../core/auth/SessionManager';
 import { DatabaseConnectionFactory } from '../../core/storage/DatabaseConnection';
 import { GameStateRepository } from '../../core/storage/GameStateRepository';
 import { UserRepository } from '../../core/storage/UserRepository';
@@ -23,18 +23,16 @@ app.set('trust proxy', 1);
 
 // --- Game setup ---
 let validator: WordValidator;
+let duotri: DuotrigordleGameSession;
 let sessionRepo: GameStateRepository;
-let userRepo: UserRepository;
 let configRepo: ConfigRepository;
 
-interface GameSession {
-  gridManager: GridManager;
-  tracker: ProgressTracker;
-  puzzle: DuotrigordlePuzzle;
-  givenUp?: boolean;
-}
-
-const sessions: Map<string, GameSession> = new Map();
+// In-memory session map: discordUserId -> gameSessionId (mirrors Semantle).
+// The persisted state lives in SessionManager / the DB; live grids are rebuilt
+// by replay in DuotrigordleGameSession.
+const userSessions: Map<string, string> = new Map();
+// Ephemeral live states for non-Discord (anonymous/local) users only.
+const anonStates: Map<string, DuotrigordleLiveSession> = new Map();
 let sessionsDate: string = new Date().toISOString().split('T')[0]!;
 
 async function initGame() {
@@ -45,15 +43,22 @@ async function initGame() {
   await new MigrationManager(db).migrate();
 
   sessionRepo = new GameStateRepository(db);
-  userRepo = new UserRepository(db);
+  const userRepo = new UserRepository(db);
   configRepo = new ConfigRepository(db);
 
   validator = new WordValidator();
   validator.loadWordLists();
   console.log(`Loaded ${validator.answerCount} answers, ${validator.guessCount} valid guesses`);
 
+  const sessionManager = new SessionManager(sessionRepo);
+  duotri = new DuotrigordleGameSession(validator, sessionManager);
+  // Keep a reference for user upserts in getOrCreateSession.
+  userRepoRef = userRepo;
+
   scheduleDailyCleanup();
 }
+
+let userRepoRef: UserRepository;
 
 function scheduleDailyCleanup() {
   const now = new Date();
@@ -63,8 +68,9 @@ function scheduleDailyCleanup() {
   const msUntilMidnight = tomorrow.getTime() - now.getTime();
 
   setTimeout(() => {
-    console.log(`[cleanup] Purging ${sessions.size} sessions for ${sessionsDate}`);
-    sessions.clear();
+    console.log(`[cleanup] Purging ${userSessions.size} sessions for ${sessionsDate}`);
+    userSessions.clear();
+    anonStates.clear();
     sessionsDate = new Date().toISOString().split('T')[0]!;
     scheduleDailyCleanup();
   }, msUntilMidnight);
@@ -72,46 +78,44 @@ function scheduleDailyCleanup() {
   console.log(`[cleanup] Next session purge in ${Math.round(msUntilMidnight / 60000)} minutes`);
 }
 
-async function getSession(id: string): Promise<GameSession> {
+/**
+ * Get or create today's session id for a user, delegating resumption/creation
+ * to SessionManager (via DuotrigordleGameSession). Returns null for non-Discord
+ * users (localStorage fallback IDs) which are not persisted.
+ */
+async function getOrCreateSession(id: string, username?: string, guildId?: string): Promise<string | null> {
+  if (id === 'default' || id.startsWith('local_')) {
+    return null;
+  }
+
   const today = new Date().toISOString().split('T')[0]!;
   if (today !== sessionsDate) {
-    console.log(`[cleanup] Date rolled to ${today}, purging ${sessions.size} stale sessions`);
-    sessions.clear();
+    console.log(`[cleanup] Date rolled to ${today}, purging ${userSessions.size} stale sessions`);
+    userSessions.clear();
+    anonStates.clear();
     sessionsDate = today;
   }
 
-  // Check in-memory cache first
-  let session = sessions.get(id);
-  if (session) return session;
+  const cached = userSessions.get(id);
+  if (cached) return cached;
 
-  // Create a fresh GridManager for today's puzzle
-  const puzzle = GridManager.generateDailyPuzzle(new Date(), validator);
-  const gm = new GridManager(validator);
-  gm.initializeGrids(puzzle);
-  const tracker = new ProgressTracker(gm);
-  session = { gridManager: gm, tracker, puzzle };
+  await userRepoRef.upsertUser(id, username || 'activity_user_' + id);
+  const { session } = await duotri.startSession(id, guildId || 'activity');
+  userSessions.set(id, session.id);
+  return session.id;
+}
 
-  // Check DB for an existing session and replay guesses
-  if (id !== 'default' && !id.startsWith('local_')) {
-    const dbSession = await sessionRepo.getActiveSession(id, 'duotrigordle', new Date());
-    if (dbSession && dbSession.gameData?.guesses && Array.isArray(dbSession.gameData.guesses)) {
-      // Replay all stored guesses to reconstruct grid state
-      for (const word of dbSession.gameData.guesses) {
-        gm.applyGuess(word);
-      }
-      // If it was a give-up, mark it
-      if (dbSession.result?.gaveUp || dbSession.gameData?.gaveUp) {
-        session.givenUp = true;
-      }
-    }
+function getAnonLive(id: string): DuotrigordleLiveSession {
+  let live = anonStates.get(id);
+  if (!live) {
+    live = duotri.newAnonLive();
+    anonStates.set(id, live);
   }
-
-  sessions.set(id, session);
-  return session;
+  return live;
 }
 
 /** Build a serializable state snapshot for the frontend */
-function buildStateResponse(session: GameSession) {
+function buildStateResponse(session: DuotrigordleLiveSession) {
   const summary = session.tracker.getSummary();
   const grids = session.gridManager.getGrids().map(g => ({
     gridIndex: g.gridIndex,
@@ -139,64 +143,6 @@ function buildStateResponse(session: GameSession) {
     // Include target words on game over for the word list card
     targetWords: (summary.isGameOver || session.givenUp) ? session.puzzle.targetWords : undefined,
   };
-}
-
-/** Save game state to the DB (called on every guess and give-up) */
-async function saveGameState(userId: string, session: GameSession, username?: string, guildId?: string): Promise<void> {
-  try {
-    await userRepo.upsertUser(userId, username || 'activity_user_' + userId);
-
-    const summary = session.tracker.getSummary();
-    // Collect all guessed words (same across all grids, just grab from grid 0)
-    const guesses = session.gridManager.getGrids()[0]?.guesses.map(g => g.word) ?? [];
-
-    const existing = await sessionRepo.getActiveSession(userId, 'duotrigordle', new Date());
-
-    if (existing) {
-      // Fix server_id if we now have the guild ID
-      if (guildId && existing.serverId === 'activity') {
-        await sessionRepo.updateServerId(existing.id, guildId);
-      }
-      await sessionRepo.updateGameData(existing.id, {
-        guesses,
-        gridsCompleted: summary.completedGrids,
-        guessesUsed: summary.guessesUsed,
-        gaveUp: !!session.givenUp,
-      });
-      if (summary.isGameOver || session.givenUp) {
-        await sessionRepo.completeSession(existing.id, {
-          isWin: summary.isWin,
-          gridsCompleted: summary.completedGrids,
-          guessesUsed: summary.guessesUsed,
-          gaveUp: !!session.givenUp,
-        });
-      }
-    } else {
-      const created = await sessionRepo.createSession({
-        userId,
-        serverId: guildId || 'activity',
-        gameType: 'duotrigordle',
-        puzzleDate: new Date(),
-        maxAttempts: MAX_GUESSES,
-        gameData: {
-          guesses,
-          gridsCompleted: summary.completedGrids,
-          guessesUsed: summary.guessesUsed,
-          gaveUp: !!session.givenUp,
-        },
-      });
-      if (summary.isGameOver || session.givenUp) {
-        await sessionRepo.completeSession(created.id, {
-          isWin: summary.isWin,
-          gridsCompleted: summary.completedGrids,
-          guessesUsed: summary.guessesUsed,
-          gaveUp: !!session.givenUp,
-        });
-      }
-    }
-  } catch (e) {
-    console.error('[db] Failed to save game state:', e);
-  }
 }
 
 // --- API endpoints ---
@@ -260,45 +206,53 @@ app.post('/game/discord/token', async (req, res) => {
 
 // Get current game state
 app.get('/game/state', async (req, res) => {
-  const userId = resolveUserId(req);
-  console.log('[session] state request from:', userId);
-  const session = await getSession(userId);
-  res.json(buildStateResponse(session));
+  const id = resolveUserId(req);
+  const username = req.authUsername ?? (req.query.username as string | undefined);
+  const guildId = req.query.guildId as string | undefined;
+  console.log('[session] state request from:', id);
+
+  const sessionId = await getOrCreateSession(id, username, guildId);
+  const live = sessionId ? await duotri.getLive(sessionId) : getAnonLive(id);
+  if (!live) { res.status(500).json({ error: 'failed to load session' }); return; }
+  res.json(buildStateResponse(live));
 });
 
 // Submit a guess
 app.post('/game/guess', async (req, res) => {
-  const userId = resolveUserId(req);
+  const id = resolveUserId(req);
   const guildId = req.query.guildId as string | undefined;
   const { word } = req.body;
   const username = req.authUsername ?? req.body.username;
-  console.log('[guess]', userId, word);
+  console.log('[guess]', id, word);
   const validation = validateWordleGuess(word);
   if (!validation.ok) { res.status(400).json({ isValid: false, error: validation.error }); return; }
   const cleanWord = validation.value!;
 
-  const session = await getSession(userId);
+  const sessionId = await getOrCreateSession(id, username, guildId);
 
-  if (session.givenUp) {
-    res.json({ isValid: false, error: 'Game is already over.' });
-    return;
+  let live: DuotrigordleLiveSession;
+  let result;
+  if (sessionId) {
+    if (guildId) await duotri.fixServerId(sessionId, guildId);
+    const outcome = await duotri.processGuess(sessionId, cleanWord);
+    if (!outcome) { res.status(500).json({ isValid: false, error: 'session not found' }); return; }
+    result = outcome.result;
+    live = outcome.live;
+  } else {
+    // Anonymous/local play — mutate ephemeral state, no persistence.
+    live = getAnonLive(id);
+    if (live.givenUp) { res.json({ isValid: false, error: 'Game is already over.' }); return; }
+    result = live.gridManager.applyGuess(cleanWord);
   }
-
-  const result = session.gridManager.applyGuess(cleanWord);
 
   if (!result.isValid) {
     res.json({ isValid: false, error: result.error });
     return;
   }
 
-  // Save to DB on every valid guess (enables cross-context resumption)
-  if (userId !== 'default' && !userId.startsWith('local_')) {
-    await saveGameState(userId, session, username, guildId);
-  }
-
   res.json({
     isValid: true,
-    ...buildStateResponse(session),
+    ...buildStateResponse(live),
     newlyCompleted: result.completedGrids,
   });
 });
@@ -357,30 +311,42 @@ app.post('/game/complete', async (req, res) => {
 
 // Give up — end game early when win is impossible
 app.post('/game/give-up', async (req, res) => {
-  const userId = resolveUserId(req);
+  const id = resolveUserId(req);
   const guildId = req.query.guildId as string | undefined;
   const { username: bodyUsername } = req.body || {};
   const username = req.authUsername ?? bodyUsername;
-  console.log('[give-up]', userId);
-  const session = await getSession(userId);
+  console.log('[give-up]', id);
 
-  session.givenUp = true;
-
-  // Save as completed loss
-  if (userId !== 'default' && !userId.startsWith('local_')) {
-    await saveGameState(userId, session, username, guildId);
+  const sessionId = await getOrCreateSession(id, username, guildId);
+  let live: DuotrigordleLiveSession | null;
+  if (sessionId) {
+    if (guildId) await duotri.fixServerId(sessionId, guildId);
+    live = await duotri.giveUp(sessionId);
+  } else {
+    live = getAnonLive(id);
+    live.givenUp = true;
   }
+  if (!live) { res.status(500).json({ error: 'session not found' }); return; }
 
-  res.json(buildStateResponse(session));
+  res.json(buildStateResponse(live));
 });
 
 // Reset session (testing)
 app.post('/game/reset', async (req, res) => {
-  const userId = resolveUserId(req);
-  console.log('[reset]', userId);
-  sessions.delete(userId);
-  const session = await getSession(userId);
-  res.json(buildStateResponse(session));
+  const id = resolveUserId(req);
+  console.log('[reset]', id);
+
+  userSessions.delete(id);
+  anonStates.delete(id);
+
+  if (id !== 'default' && !id.startsWith('local_')) {
+    const dbSession = await sessionRepo.getActiveSession(id, 'duotrigordle', new Date());
+    if (dbSession) await sessionRepo.deleteSession(dbSession.id);
+  }
+
+  const sessionId = await getOrCreateSession(id);
+  const live = sessionId ? await duotri.getLive(sessionId) : getAnonLive(id);
+  res.json(buildStateResponse(live!));
 });
 
 // --- Start ---

@@ -3,3 +3,4 @@ export * from './GridManager';
 export * from './WordValidator';
 export * from './GridRenderer';
 export * from './ProgressTracker';
+export * from './DuotrigordleGameSession';
