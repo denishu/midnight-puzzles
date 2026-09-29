@@ -2,7 +2,8 @@ import express from 'express';
 import path from 'path';
 import { config } from 'dotenv';
 import { CountryGraph } from '../../games/travle/CountryGraph';
-import { TravleGame, TravleGameState } from '../../games/travle/TravleGame';
+import { TravleGameSession } from '../../games/travle/TravleGameSession';
+import { SessionManager } from '../../core/auth/SessionManager';
 import { DatabaseConnectionFactory } from '../../core/storage/DatabaseConnection';
 import { GameStateRepository } from '../../core/storage/GameStateRepository';
 import { UserRepository } from '../../core/storage/UserRepository';
@@ -21,12 +22,15 @@ app.use(express.json());
 app.set('trust proxy', 1);
 
 // --- Game setup ---
-let travleGame: TravleGame;
+let travle: TravleGameSession;
 let graph: CountryGraph;
 let sessionRepo: GameStateRepository;
 let userRepo: UserRepository;
 let configRepo: ConfigRepository;
-const sessions: Map<string, TravleGameState> = new Map();
+
+// In-memory session map: discordUserId -> gameSessionId (mirrors Semantle).
+// The actual game state lives in SessionManager / the DB, not here.
+const userSessions: Map<string, string> = new Map();
 
 // Track which date the current sessions belong to (for daily cleanup)
 let sessionsDate: string = new Date().toISOString().split('T')[0]!;
@@ -45,8 +49,10 @@ async function initGame() {
   const g = new CountryGraph();
   await g.initialize();
   graph = g;
-  travleGame = new TravleGame(g);
-  travleGame.init();
+
+  const sessionManager = new SessionManager(sessionRepo);
+  travle = new TravleGameSession(g, sessionManager);
+  travle.init();
   console.log('Travle game initialized');
 
   // Schedule daily session cleanup at midnight UTC
@@ -61,8 +67,8 @@ function scheduleDailyCleanup() {
   const msUntilMidnight = tomorrow.getTime() - now.getTime();
 
   setTimeout(() => {
-    console.log(`[cleanup] Purging ${sessions.size} sessions for ${sessionsDate}`);
-    sessions.clear();
+    console.log(`[cleanup] Purging ${userSessions.size} sessions for ${sessionsDate}`);
+    userSessions.clear();
     sessionsDate = new Date().toISOString().split('T')[0]!;
     // Reschedule for next day
     scheduleDailyCleanup();
@@ -71,87 +77,33 @@ function scheduleDailyCleanup() {
   console.log(`[cleanup] Next session purge in ${Math.round(msUntilMidnight / 60000)} minutes`);
 }
 
-async function getSession(id: string): Promise<TravleGameState> {
+/**
+ * Get or create today's session id for a user, delegating resumption/creation
+ * to SessionManager (via TravleGameSession). Returns null for non-Discord users
+ * (localStorage fallback IDs) which are not persisted.
+ */
+async function getOrCreateSession(id: string, username?: string, guildId?: string): Promise<string | null> {
+  if (id === 'default' || id.startsWith('local_')) {
+    return null;
+  }
+
   // If the date rolled over but cleanup hasn't fired yet, clear now
   const today = new Date().toISOString().split('T')[0]!;
   if (today !== sessionsDate) {
-    console.log(`[cleanup] Date rolled to ${today}, purging ${sessions.size} stale sessions`);
-    sessions.clear();
+    console.log(`[cleanup] Date rolled to ${today}, purging ${userSessions.size} stale sessions`);
+    userSessions.clear();
     sessionsDate = today;
   }
 
-  // Check in-memory cache first
-  let state = sessions.get(id);
-  if (state) return state;
+  const cached = userSessions.get(id);
+  if (cached) return cached;
 
-  // Check DB for an existing session today (handles cross-context resumption)
-  if (id !== 'default' && !id.startsWith('local_')) {
-    const dbSession = await sessionRepo.getActiveSession(id, 'travle', new Date());
-    if (dbSession && dbSession.gameData && dbSession.gameData.puzzle) {
-      state = dbSession.gameData as unknown as TravleGameState;
-      sessions.set(id, state);
-      return state;
-    }
-  }
+  // Ensure user exists (placeholder username — bot will have the real one)
+  await userRepo.upsertUser(id, username || 'activity_user_' + id);
 
-  // Create a new session
-  const puzzle = travleGame.genPuzzle(new Date());
-  state = travleGame.newState(puzzle);
-  sessions.set(id, state);
-  return state;
-}
-
-/** Save a completed game to the DB so the bot can use it for recaps */
-async function saveCompletedGame(userId: string, state: TravleGameState, username?: string, guildId?: string): Promise<void> {
-  try {
-    // Ensure user exists (upsert with a placeholder username — bot will have the real one)
-    await userRepo.upsertUser(userId, username || 'activity_user_' + userId);
-
-    // Check if session already exists for today
-    const existing = await sessionRepo.getActiveSession(userId, 'travle', new Date());
-    if (existing) {
-      // Fix server_id if we now have the guild ID
-      if (guildId && existing.serverId === 'activity') {
-        await sessionRepo.updateServerId(existing.id, guildId);
-      }
-      await sessionRepo.updateGameData(existing.id, state as any);
-      if (state.isComplete && !existing.isComplete) {
-        try {
-          await sessionRepo.completeSession(existing.id, {
-            isWin: state.isWin,
-            guessCount: state.guesses.length,
-            shortestPath: state.puzzle.shortestPathLength,
-          });
-        } catch (e) {
-          console.error('[db] completeSession failed, retrying:', e);
-          // Retry once
-          await sessionRepo.completeSession(existing.id, {
-            isWin: state.isWin,
-            guessCount: state.guesses.length,
-            shortestPath: state.puzzle.shortestPathLength,
-          });
-        }
-      }
-    } else {
-      const created = await sessionRepo.createSession({
-        userId,
-        serverId: guildId || 'activity',
-        gameType: 'travle',
-        puzzleDate: new Date(),
-        maxAttempts: state.puzzle.maxGuesses,
-        gameData: state as any,
-      });
-      if (state.isComplete) {
-        await sessionRepo.completeSession(created.id, {
-          isWin: state.isWin,
-          guessCount: state.guesses.length,
-          shortestPath: state.puzzle.shortestPathLength,
-        });
-      }
-    }
-  } catch (e) {
-    console.error('[db] Failed to save completed game:', e);
-  }
+  const session = await travle.startSession(id, guildId || 'activity');
+  userSessions.set(id, session.id);
+  return session.id;
 }
 
 // --- API endpoints ---
@@ -229,11 +181,30 @@ app.get('/game/geojson', async (_req, res) => {
   }
 });
 
+// Ephemeral in-memory states for non-Discord (anonymous/local) users only.
+// These are never persisted; they let local play work without a DB session.
+const anonStates: Map<string, import('../../games/travle/TravleGame').TravleGameState> = new Map();
+
+function getAnonState(id: string) {
+  let state = anonStates.get(id);
+  if (!state) {
+    state = travle.newAnonState(new Date());
+    anonStates.set(id, state);
+  }
+  return state;
+}
+
 // Get today's puzzle
 app.get('/game/puzzle', async (req, res) => {
-  const sessionId = resolveUserId(req);
-  console.log('[session] puzzle request from:', sessionId);
-  const state = await getSession(sessionId);
+  const id = resolveUserId(req);
+  const username = req.authUsername ?? (req.query.username as string | undefined);
+  const guildId = req.query.guildId as string | undefined;
+  console.log('[session] puzzle request from:', id);
+
+  const sessionId = await getOrCreateSession(id, username, guildId);
+  const state = sessionId ? await travle.getState(sessionId) : getAnonState(id);
+  if (!state) { res.status(500).json({ error: 'failed to load session' }); return; }
+
   res.json({
     start: state.puzzle.start,
     end: state.puzzle.end,
@@ -249,21 +220,28 @@ app.get('/game/puzzle', async (req, res) => {
 
 // Submit a guess
 app.post('/game/guess', async (req, res) => {
-  const sessionId = resolveUserId(req);
+  const id = resolveUserId(req);
   const guildId = req.query.guildId as string | undefined;
   const { country } = req.body;
   const username = req.authUsername ?? req.body.username;
-  console.log('[guess]', sessionId, country);
+  console.log('[guess]', id, country);
   const validation = validateGuessText(country);
   if (!validation.ok) { res.status(400).json({ error: validation.error }); return; }
   const cleanCountry = validation.value!;
 
-  const state = await getSession(sessionId);
-  const result = travleGame.guess(state, cleanCountry);
+  const sessionId = await getOrCreateSession(id, username, guildId);
 
-  // Save to DB on every guess (enables cross-context resumption)
-  if (sessionId !== 'default' && !sessionId.startsWith('local_')) {
-    await saveCompletedGame(sessionId, state, username, guildId);
+  let state: import('../../games/travle/TravleGame').TravleGameState;
+  let result;
+  if (sessionId) {
+    // Fix server_id if we now have the guild ID (handles sessions created without it)
+    if (guildId) await travle.fixServerId(sessionId, guildId);
+    result = await travle.processGuess(sessionId, cleanCountry);
+    state = (await travle.getState(sessionId))!;
+  } else {
+    // Anonymous/local play — mutate the ephemeral state, no persistence.
+    state = getAnonState(id);
+    result = travle.guessAnon(state, cleanCountry);
   }
 
   res.json({
@@ -276,8 +254,10 @@ app.post('/game/guess', async (req, res) => {
 
 // Get a hint: reveal an unguessed country on the cheapest path
 app.get('/game/hint', async (req, res) => {
-  const sessionId = resolveUserId(req);
-  const state = await getSession(sessionId);
+  const id = resolveUserId(req);
+  const sessionId = await getOrCreateSession(id);
+  const state = sessionId ? await travle.getState(sessionId) : getAnonState(id);
+  if (!state) { res.json({ hint: null }); return; }
 
   if (state.isComplete) {
     res.json({ hint: null });
@@ -377,16 +357,29 @@ app.post('/game/complete', async (req, res) => {
 
 // Reset session
 app.post('/game/reset', async (req, res) => {
-  const sessionId = resolveUserId(req);
-  sessions.delete(sessionId);
-  const state = await getSession(sessionId);
+  const id = resolveUserId(req);
+  console.log('[reset]', id);
+
+  // Drop the cached session id + any anonymous state.
+  userSessions.delete(id);
+  anonStates.delete(id);
+
+  // Delete the persisted session so the next request starts fresh.
+  if (id !== 'default' && !id.startsWith('local_')) {
+    const dbSession = await sessionRepo.getActiveSession(id, 'travle', new Date());
+    if (dbSession) await sessionRepo.deleteSession(dbSession.id);
+  }
+
+  // Return a fresh puzzle state (re-creates the session on demand).
+  const sessionId = await getOrCreateSession(id);
+  const state = sessionId ? await travle.getState(sessionId) : getAnonState(id);
   res.json({
-    start: state.puzzle.start,
-    end: state.puzzle.end,
-    shortestPathLength: state.puzzle.shortestPathLength,
-    maxGuesses: state.puzzle.maxGuesses,
+    start: state!.puzzle.start,
+    end: state!.puzzle.end,
+    shortestPathLength: state!.puzzle.shortestPathLength,
+    maxGuesses: state!.puzzle.maxGuesses,
     guesses: [],
-    guessesRemaining: state.guessesRemaining,
+    guessesRemaining: state!.guessesRemaining,
   });
 });
 

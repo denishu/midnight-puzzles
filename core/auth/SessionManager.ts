@@ -91,6 +91,20 @@ export class SessionManager {
   }
 
   /**
+   * Update the server (guild) id for a session. Used to backfill the real
+   * guild id onto sessions first created from a DM/unknown context ('activity').
+   */
+  async updateServerId(sessionId: string, serverId: string): Promise<void> {
+    await this.gameStateRepo.updateServerId(sessionId, serverId);
+
+    // Update in-memory cache
+    const session = this.activeSessions.get(sessionId);
+    if (session) {
+      session.serverId = serverId;
+    }
+  }
+
+  /**
    * Increment attempt counter for a session
    */
   async incrementAttempts(sessionId: string): Promise<void> {
