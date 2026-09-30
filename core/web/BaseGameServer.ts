@@ -110,18 +110,24 @@ export class BaseGameServer {
   }
 
   /**
-   * Boot the server:
+   * Configure the server WITHOUT binding a port or starting the daily-cleanup
+   * timer. Returns `this` so callers can reach `.app` (e.g. supertest in tests).
+   *
+   * Steps:
    *  1. fail-fast config validation
    *  2. DB init + migrate, build shared context
    *  3. game init hook (constructs the game, returns session hooks)
    *  4. common /game middleware + routes
    *  5. game-specific routes
-   *  6. static serving + listen
+   *  6. static serving
+   *
+   * Deliberately omits the port bind and the cleanup setTimeout so tests can
+   * exercise the HTTP surface without leaking a listener or a timer.
    */
-  async start(
+  async build(
     init: (ctx: GameServerContext) => Promise<GameHooks>,
     registerRoutes: (app: Express, base: BaseGameServer) => void,
-  ): Promise<void> {
+  ): Promise<this> {
     // 1. Fail fast if required config is missing (before doing any work).
     validateConfigOrExit(this.config.requiredEnv, this.config.configLabel);
 
@@ -149,8 +155,21 @@ export class BaseGameServer {
     // 5. Game-specific routes.
     registerRoutes(this.app, this);
 
-    // 6. Static serving + listen.
+    // 6. Static serving (after API routes so they take priority).
     this.app.use(express.static(path.resolve(process.cwd(), this.config.staticDir)));
+
+    return this;
+  }
+
+  /**
+   * Boot the server for real: build it, start the daily-cleanup timer, and bind
+   * the listen port. This is what the server entrypoints call in production.
+   */
+  async listen(
+    init: (ctx: GameServerContext) => Promise<GameHooks>,
+    registerRoutes: (app: Express, base: BaseGameServer) => void,
+  ): Promise<void> {
+    await this.build(init, registerRoutes);
     this.scheduleDailyCleanup();
     this.app.listen(this.config.port, () => {
       console.log(`${this.config.gameType} web running at http://localhost:${this.config.port}`);
