@@ -7,7 +7,7 @@ module.exports = {
     '**/?(*.)+(spec|test).ts'
   ],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.ts$': ['ts-jest', { tsconfig: 'tsconfig.json' }],
   },
   collectCoverageFrom: [
     'core/**/*.ts',
@@ -27,10 +27,4 @@ module.exports = {
     '^@bot/(.*)$': '<rootDir>/bot/$1'
   },
   testTimeout: 10000,
-  // Property-based testing configuration
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.json'
-    }
-  }
 };

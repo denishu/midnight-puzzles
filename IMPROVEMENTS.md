@@ -145,10 +145,14 @@ Concentrated in the storage repos and server response shapes. Type the API
 request/response bodies (a shared `types.ts` between server and `app-game.js` is
 ideal). Flip the ESLint rule to `error` once close to zero.
 
-### 10. Finish task #20 items + ts-jest deprecation
-- Move `jest.config.js` `globals['ts-jest']` into `transform`.
-- Remove dead code (`web/travle/main.js`).
-- Cover image assets; end-to-end midnight-message test.
+### 10. Finish task #20 items + ts-jest deprecation — 🔶 PARTIAL
+- ✅ Moved `jest.config.js` `globals['ts-jest']` into `transform`
+  (`['ts-jest', { tsconfig: 'tsconfig.json' }]`) — the deprecation warning is
+  gone from test runs.
+- ✅ Dead code removed (`web/travle/main.js` no longer exists).
+- ✅ "Remove debug logging from production" — handled by #7 (`LOG_LEVEL`).
+- ⬜ Remaining: cover image assets for all 3 bots; end-to-end midnight-message
+  test (the daily recap flow still has no automated coverage).
 
 ### 11. Act on the Semantle data-quality audit
 `TargetWordQuality.test.ts` flags ~16.5% (331/2001) plural-looking answers. Prune
