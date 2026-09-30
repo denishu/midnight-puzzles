@@ -1,4 +1,5 @@
 import express, { Express } from 'express';
+import type { Server } from 'http';
 import path from 'path';
 import { DatabaseConnection, DatabaseConnectionFactory } from '../storage/DatabaseConnection';
 import { GameStateRepository } from '../storage/GameStateRepository';
@@ -100,6 +101,9 @@ export class BaseGameServer {
 
   private ctx!: GameServerContext;
   private hooks!: GameHooks;
+  private httpServer?: Server;
+  private cleanupTimer?: NodeJS.Timeout;
+  private shuttingDown = false;
 
   constructor(config: GameServerConfig) {
     this.config = config;
@@ -148,6 +152,7 @@ export class BaseGameServer {
     this.hooks = await init(this.ctx);
 
     // 4. Common middleware + routes.
+    this.installHealthCheck();
     this.installCommonMiddleware();
     this.installTokenExchange();
     this.installCompleteRoute();
@@ -171,9 +176,54 @@ export class BaseGameServer {
   ): Promise<void> {
     await this.build(init, registerRoutes);
     this.scheduleDailyCleanup();
-    this.app.listen(this.config.port, () => {
+    this.httpServer = this.app.listen(this.config.port, () => {
       console.log(`${this.config.gameType} web running at http://localhost:${this.config.port}`);
     });
+    this.installShutdownHandlers();
+  }
+
+  /**
+   * Register SIGTERM/SIGINT handlers for graceful shutdown. The handlers run
+   * the drain sequence (see {@link shutdown}) and then exit the process. The
+   * drain itself is factored out so it can be unit-tested without real signals
+   * or process.exit.
+   */
+  private installShutdownHandlers(): void {
+    const handle = (signal: string) => {
+      void this.shutdown(signal).then(() => process.exit(0));
+    };
+    process.on('SIGTERM', () => handle('SIGTERM'));
+    process.on('SIGINT', () => handle('SIGINT'));
+  }
+
+  /**
+   * Graceful shutdown drain: stop accepting new connections, cancel the cleanup
+   * timer, then drain/close the DB pool. Idempotent — a second call while
+   * already shutting down is a no-op. Does NOT call process.exit so it stays
+   * testable; the signal handlers exit after this resolves.
+   */
+  async shutdown(signal: string): Promise<void> {
+    if (this.shuttingDown) return;
+    this.shuttingDown = true;
+    console.log(`[shutdown] ${signal} received, shutting down ${this.config.gameType} web...`);
+
+    if (this.cleanupTimer) clearTimeout(this.cleanupTimer);
+
+    // Stop accepting new connections and wait for in-flight requests to finish.
+    await new Promise<void>((resolve) => {
+      if (!this.httpServer) { resolve(); return; }
+      this.httpServer.close(() => resolve());
+    });
+
+    // Drain/close the DB pool.
+    try {
+      await DatabaseConnectionFactory.close();
+      console.log('[shutdown] database closed');
+    } catch (e) {
+      console.error('[shutdown] error closing database:', e);
+    }
+
+    console.log('[shutdown] done');
   }
 
   /** Shared infrastructure (repos, session manager) for game routes. */
@@ -339,7 +389,7 @@ export class BaseGameServer {
     tomorrow.setUTCHours(0, 0, 5, 0); // 5 seconds past midnight to avoid race
     const msUntilMidnight = tomorrow.getTime() - now.getTime();
 
-    setTimeout(() => {
+    this.cleanupTimer = setTimeout(() => {
       console.log(`[cleanup] Purging ${this.userSessions.size} sessions for ${this.sessionsDate}`);
       this.userSessions.clear();
       this.hooks.onDailyCleanup?.();
@@ -348,5 +398,23 @@ export class BaseGameServer {
     }, msUntilMidnight);
 
     console.log(`[cleanup] Next session purge in ${Math.round(msUntilMidnight / 60000)} minutes`);
+  }
+
+  /**
+   * Liveness/readiness probe. Registered on /health (NOT under /game), so it is
+   * exempt from the auth + rate-limit + no-cache middleware. Pings the DB with a
+   * trivial query so the check reflects real readiness, not just process
+   * liveness. Returns 200 {status:'ok'} or 503 {status:'error'} on DB failure.
+   */
+  private installHealthCheck(): void {
+    this.app.get('/health', async (_req, res) => {
+      try {
+        await this.ctx.db.query('SELECT 1');
+        res.json({ status: 'ok', game: this.config.gameType });
+      } catch (e) {
+        console.error('[health] DB check failed:', e);
+        res.status(503).json({ status: 'error', game: this.config.gameType });
+      }
+    });
   }
 }

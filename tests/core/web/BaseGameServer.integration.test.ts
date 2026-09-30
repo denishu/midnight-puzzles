@@ -115,4 +115,36 @@ describe('BaseGameServer HTTP wiring', () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/no channel configured/);
   });
+
+  it('/health returns 200 ok with a DB ping', async () => {
+    const res = await request(app).get('/health');
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('ok');
+    expect(res.body.game).toBe('testgame');
+  });
+
+  it('/health is exempt from the /game rate-limit + no-cache middleware', async () => {
+    const res = await request(app).get('/health');
+    // Not under /game, so no rate-limit headers and no forced no-store.
+    expect(res.headers['x-ratelimit-limit']).toBeUndefined();
+    expect(res.headers['cache-control'] ?? '').not.toContain('no-store');
+  });
+});
+
+// NOTE: these run LAST because shutdown() closes the shared DB singleton.
+describe('BaseGameServer graceful shutdown', () => {
+  it('drains: closes the DB and logs the sequence (no process.exit)', async () => {
+    // Before: DB is usable.
+    await expect(server.context.db.query('SELECT 1')).resolves.toBeDefined();
+
+    await server.shutdown('TEST');
+
+    // After: the DB connection is closed, so queries fail.
+    await expect(server.context.db.query('SELECT 1')).rejects.toBeDefined();
+  });
+
+  it('is idempotent — a second shutdown() is a no-op', async () => {
+    // Already shut down above; calling again must not throw.
+    await expect(server.shutdown('TEST-again')).resolves.toBeUndefined();
+  });
 });
