@@ -108,9 +108,15 @@ session survives; the cache doesn't) and wouldn't be shared across instances. Fi
 for one Hetzner box — but note the limitation in code + README, and sketch the
 DB/Redis path for horizontal scale.
 
-### 6. `DatabaseConnectionFactory` singleton footgun
-`create()` ignores its `config` after the first call and returns the cached instance.
-Two different DB configs would silently get the wrong one. Document or fix.
+### 6. `DatabaseConnectionFactory` singleton footgun — ✅ DONE
+`create()` used to silently return the cached instance and ignore its `config`
+on every call after the first, so a request for a different database would
+quietly get the wrong connection. It now records the config used to build the
+instance and, on a later call with a *different* config (type/database/host/
+port/username), throws a clear error instead of returning the wrong one; a
+matching config still returns the shared instance as intended. `close()` clears
+the stored config so switching databases (e.g. tests → in-memory) works after an
+explicit close. Covered by `tests/core/storage/DatabaseConnection.test.ts`.
 
 ---
 

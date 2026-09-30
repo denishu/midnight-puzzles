@@ -137,10 +137,29 @@ class SQLiteConnection implements DatabaseConnection {
 
 export class DatabaseConnectionFactory {
   private static instance: DatabaseConnection | null = null;
+  private static activeConfig: DatabaseConfig | null = null;
   private static logger: Logger = new Logger('DatabaseConnection');
 
+  /**
+   * Get the shared database connection, creating it on first call.
+   *
+   * This is a singleton: the connection is built once and cached; later calls
+   * return the same instance. To avoid the footgun where a caller passes a
+   * DIFFERENT config expecting a different connection (and silently gets the
+   * first one), a mismatched config now throws instead of being ignored. Call
+   * {@link close} first if you genuinely need to switch databases (e.g. tests
+   * swapping to an in-memory DB).
+   */
   static async create(config: DatabaseConfig): Promise<DatabaseConnection> {
     if (this.instance) {
+      if (this.activeConfig && !this.sameConfig(this.activeConfig, config)) {
+        throw new Error(
+          `DatabaseConnectionFactory already initialized with a different config ` +
+          `(${this.activeConfig.type}:${this.activeConfig.database}); refusing to ` +
+          `return it for a request for ${config.type}:${config.database}. ` +
+          `Call DatabaseConnectionFactory.close() before switching databases.`
+        );
+      }
       return this.instance;
     }
 
@@ -155,13 +174,26 @@ export class DatabaseConnectionFactory {
         throw new Error(`Unsupported database type: ${config.type}`);
     }
 
+    this.activeConfig = config;
     return this.instance;
+  }
+
+  /** Whether two configs point at the same database connection target. */
+  private static sameConfig(a: DatabaseConfig, b: DatabaseConfig): boolean {
+    return (
+      a.type === b.type &&
+      a.database === b.database &&
+      a.host === b.host &&
+      a.port === b.port &&
+      a.username === b.username
+    );
   }
 
   static async close(): Promise<void> {
     if (this.instance) {
       await this.instance.close();
       this.instance = null;
+      this.activeConfig = null;
     }
   }
 }
