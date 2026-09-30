@@ -50,11 +50,12 @@ export class TravleBot extends BaseBotApplication {
   }
 
   private scheduleDailyMessage(): void {
-    // Run at midnight UTC every day
-    cron.schedule('3 0 * * *', () => {
+    // Run just after midnight UTC every day (staggered after Semantle @ 00:01
+    // so the three bots' daily posts land in order in a shared server).
+    cron.schedule('2 0 * * *', () => {
       this.postDailyPuzzleMessage();
     }, { timezone: 'UTC' });
-    this.logger.info('Daily puzzle message scheduled for 00:03 UTC');
+    this.logger.info('Daily puzzle message scheduled for 00:02 UTC');
   }
 
   private async postDailyPuzzleMessage(): Promise<void> {
@@ -117,8 +118,10 @@ export class TravleBot extends BaseBotApplication {
             }
             await this.configRepo.updateStreak(guild.id, 'travle', newCount, yesterdayStr);
 
-            // Build recap embed
-            const recapEmbed = EmbedBuilder.createGameEmbed('travle', '🧭 Yesterday\'s Travle Recap');
+            // Build recap embed. Title carries the covered (yesterday's) date;
+            // the auto-timestamp signature is stripped so it doesn't show today.
+            const recapDate = yesterday.toLocaleDateString('en-US', { timeZone: 'UTC' });
+            const recapEmbed = EmbedBuilder.createGameEmbed('travle', `🧭 Travle Recap ${recapDate}`);
             const lines = serverSessions.map(s => {
               const guessCount = s.result?.guessCount || s.gameData?.guesses?.length || '?';
               const shortest = s.result?.shortestPath || '?';
@@ -132,6 +135,7 @@ export class TravleBot extends BaseBotApplication {
             });
 
             recapEmbed.setDescription(lines.join('\n\n'));
+            recapEmbed.setTimestamp(null);
             if (newCount > 0) {
               recapEmbed.setFooter({ text: `🔥 Server streak: ${newCount} day${newCount > 1 ? 's' : ''}` });
             }

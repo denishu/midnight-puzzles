@@ -60,10 +60,10 @@ export class DuotrigordleBot extends BaseBotApplication {
   private scheduleDailyMessage(): void {
     // @ts-expect-error node-cron has no type declarations
     import('node-cron').then((cron: any) => {
-      cron.default.schedule('5 0 * * *', () => {
+      cron.default.schedule('3 0 * * *', () => {
         this.postDailyPuzzleMessage();
       }, { timezone: 'UTC' });
-      this.logger.info('Daily puzzle message scheduled for 00:05 UTC');
+      this.logger.info('Daily puzzle message scheduled for 00:03 UTC');
     });
   }
 
@@ -126,8 +126,10 @@ export class DuotrigordleBot extends BaseBotApplication {
             }
             await this.configRepo.updateStreak(guild.id, 'duotrigordle', newCount, yesterdayStr);
 
-            // Build recap embed
-            const recapEmbed = EmbedBuilder.createGameEmbed('duotrigordle', '🟧 Yesterday\'s Duotrigordle Recap');
+            // Build recap embed. Title carries the covered (yesterday's) date;
+            // the auto-timestamp signature is stripped so it doesn't show today.
+            const recapDate = yesterday.toLocaleDateString('en-US', { timeZone: 'UTC' });
+            const recapEmbed = EmbedBuilder.createGameEmbed('duotrigordle', `🟧 Duotrigordle Recap ${recapDate}`);
             const lines = serverSessions.map(s => {
               const gridsCompleted = s.result?.gridsCompleted ?? s.gameData?.gridsCompleted ?? 0;
               const guessesUsed = s.result?.guessesUsed ?? s.attempts ?? '?';
@@ -139,6 +141,7 @@ export class DuotrigordleBot extends BaseBotApplication {
             });
 
             recapEmbed.setDescription(lines.join('\n'));
+            recapEmbed.setTimestamp(null);
             if (newCount > 0) {
               recapEmbed.setFooter({ text: `🔥 Server streak: ${newCount} day${newCount > 1 ? 's' : ''}` });
             }

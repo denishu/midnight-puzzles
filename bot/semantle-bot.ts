@@ -141,8 +141,11 @@ export class SemantleBot extends BaseBotApplication {
             }
             await this.configRepo.updateStreak(guild.id, 'semantle', newCount, yesterdayStr);
 
-            // Build recap embed
-            const recapEmbed = EmbedBuilder.createGameEmbed('semantle', '🔮 Yesterday\'s Semantle Recap');
+            // Build recap embed. Title carries the covered (yesterday's) date,
+            // e.g. "🔮 Semantle Recap 8/22/2026"; the auto-timestamp signature is
+            // stripped so it doesn't show today's post date on a yesterday recap.
+            const recapDate = yesterday.toLocaleDateString('en-US', { timeZone: 'UTC' });
+            const recapEmbed = EmbedBuilder.createGameEmbed('semantle', `🔮 Semantle Recap ${recapDate}`);
             const lines = serverSessions.map(s => {
               const guessCount = s.attempts || s.gameData?.guesses?.length || '?';
               const won = s.isComplete;
@@ -151,6 +154,7 @@ export class SemantleBot extends BaseBotApplication {
             });
 
             recapEmbed.setDescription(lines.join('\n'));
+            recapEmbed.setTimestamp(null);
             if (newCount > 0) {
               recapEmbed.setFooter({ text: `🔥 Server streak: ${newCount} day${newCount > 1 ? 's' : ''}` });
             }
