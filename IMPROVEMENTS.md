@@ -79,12 +79,28 @@ to Redis for multi-instance — see the scaling note in the module). Servers set
 
 ## P1 — Architecture / maintainability
 
-### 4. Extract a shared `BaseGameServer`
+### 4. Extract a shared `BaseGameServer` — ✅ DONE
+Extracted `core/web/BaseGameServer.ts`: owns the previously ~90%-duplicated
+scaffolding — Express setup, DB init + migrate + shared context (repos +
+`SessionManager`), the `userId->sessionId` cache with daily cleanup, the `/game`
+middleware stack (no-cache headers, `authMiddleware`, config-driven rate limits),
+the Discord OAuth token exchange, the `/game/complete` results post, config
+fail-fast, and static serving. Each server is now a `GameServerConfig` + an
+`init` hook (builds its game object from the shared context, returns session
+hooks) + a `registerRoutes` hook for its gameplay endpoints. `start()` is split
+into `build()` (configures the app, returns it — no port bind / no timer, for
+tests) and `listen()` (build + cleanup timer + bind). Covered by
+`tests/core/web/BaseGameServer.integration.test.ts` (supertest).
+
+<details>
+<summary>Original problem (for the record)</summary>
+
 The three `web/*/server.ts` files are ~90% duplicated (DB init + migrate, in-memory
 `userSessions` map, `scheduleDailyCleanup`, token exchange, `/game/complete` Discord
 post, static serving). Mirror what was already done on the bot side
 (`BaseBotApplication` / `BaseCommandRegistry` / `BaseEventHandlers`). Doing this
 first makes #1 and #2 one-place changes.
+</details>
 
 ### 5. Session state: document/limit the in-memory map
 `userSessions: Map<string,string>` is per-process and lost on restart/deploy (the DB
@@ -100,15 +116,25 @@ Two different DB configs would silently get the wrong one. Document or fix.
 
 ## P1 — Observability & ops
 
-### 7. Route web servers through the `Logger`
-Servers use `console.log('[session]...')` while a winston `Logger`
-(`core/utils/Logger.ts`) exists and is used elsewhere. Structured logging with levels
-also cleanly solves task #20's "remove debug logging from production" via `LOG_LEVEL`.
+### 7. Route web servers through the `Logger` — ✅ DONE
+`BaseGameServer` and the three server entrypoints now use the winston-backed
+`Logger` (context per game, e.g. `travle-web`) instead of `console.*`.
+Per-request noise (`[state]`/`[guess]`/`[hint]`/`[give-up]`/`[reset]`) is at
+`debug`, so the default `LOG_LEVEL=info` silences it in production (this also
+covers task #20's "remove debug logging from production" — set `LOG_LEVEL=debug`
+to bring it back). Lifecycle/ops (startup, cleanup, shutdown, results post) is
+`info`; failures are `error` with structured metadata. CLI `scripts/*` and
+browser frontend `web/*/*.js` intentionally keep `console` (different runtime).
 
-### 8. Health check + graceful shutdown
-No `/health` endpoint and no SIGTERM handler. Add both; wire
-`DatabaseConnectionFactory.close()` into `process.on('SIGTERM')` to drain/close the
-pool.
+### 8. Health check + graceful shutdown — ✅ DONE
+`BaseGameServer` serves `GET /health` (DB ping via `SELECT 1`, returns
+`200 {status:'ok'}` or `503 {status:'error'}`), registered outside the `/game`
+middleware so it is exempt from auth + rate limiting + no-cache. On
+`SIGTERM`/`SIGINT` it drains gracefully: stop accepting new connections, cancel
+the cleanup timer, close the DB pool via `DatabaseConnectionFactory.close()`,
+then exit. The drain is a testable `shutdown()` method (no `process.exit`);
+`/health` + the drain are covered in `BaseGameServer.integration.test.ts`, and
+the live signal path was verified manually.
 
 ---
 
