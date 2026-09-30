@@ -6,8 +6,11 @@ import { DailyPuzzleRepository } from '../../core/storage/DailyPuzzleRepository'
 import { resolveUserId } from '../../core/auth/ActivityAuth';
 import { validateGuessText } from '../../core/utils/InputValidator';
 import { BaseGameServer, GameServerConfig } from '../../core/web/BaseGameServer';
+import { Logger } from '../../core/utils/Logger';
 
 config();
+
+const log = new Logger('semantle-web');
 
 const CONFIG: GameServerConfig = {
   gameType: 'semantle',
@@ -35,7 +38,7 @@ async (ctx) => {
   const semanticEngine = new SemanticEngine();
   semantleGame = new SemantleGame(semanticEngine, ctx.sessionManager, dailyPuzzleRepo);
   await semantleGame.initialize();
-  console.log('Semantle game initialized');
+  log.info('Semantle game initialized');
 
   return {
     startSession: async (userId, serverId) => {
@@ -51,7 +54,7 @@ async (ctx) => {
     const userId = resolveUserId(req);
     const username = req.authUsername ?? (req.query.username as string | undefined);
     const guildId = req.query.guildId as string | undefined;
-    console.log('[session] state request from:', userId);
+    log.debug('[state] request', { userId });
 
     try {
       const sessionId = await base.getOrCreateSession(userId, username, guildId);
@@ -81,7 +84,7 @@ async (ctx) => {
         targetWord: session.isComplete ? session.gameData.targetWord : undefined,
       });
     } catch (e) {
-      console.error('[state] Error:', e);
+      log.error('[state] error', { error: e });
       res.status(500).json({ error: 'failed to get state' });
     }
   });
@@ -92,7 +95,7 @@ async (ctx) => {
     const guildId = req.query.guildId as string | undefined;
     const { word } = req.body;
     const username = req.authUsername ?? req.body.username;
-    console.log('[guess]', userId, word);
+    log.debug('[guess]', { userId, word });
     const validation = validateGuessText(word);
     if (!validation.ok) { res.status(400).json({ error: validation.error }); return; }
     const cleanWord = validation.value!;
@@ -128,7 +131,7 @@ async (ctx) => {
         serverGuessCount,
       });
     } catch (e) {
-      console.error('[guess] Error:', e);
+      log.error('[guess] error', { error: e });
       res.status(500).json({ error: 'failed to process guess' });
     }
   });
@@ -137,7 +140,7 @@ async (ctx) => {
   app.get('/game/hint', async (req, res) => {
     const userId = resolveUserId(req);
     const guildId = req.query.guildId as string | undefined;
-    console.log('[hint]', userId);
+    log.debug('[hint]', { userId });
 
     try {
       const sessionId = await base.getOrCreateSession(userId, undefined, guildId);
@@ -146,7 +149,7 @@ async (ctx) => {
       if (!hint) { res.json({ hint: null }); return; }
       res.json({ hint: hint.word, rank: hint.rank });
     } catch (e) {
-      console.error('[hint] Error:', e);
+      log.error('[hint] error', { error: e });
       res.status(500).json({ error: 'failed to get hint' });
     }
   });
@@ -154,7 +157,7 @@ async (ctx) => {
   // Reset session (for testing)
   app.post('/game/reset', async (req, res) => {
     const userId = resolveUserId(req);
-    console.log('[reset]', userId);
+    log.debug('[reset]', { userId });
     base.forgetSession(userId);
     const dbSession = await base.context.sessionRepo.getActiveSession(userId, 'semantle', new Date());
     if (dbSession) await base.context.sessionRepo.deleteSession(dbSession.id);

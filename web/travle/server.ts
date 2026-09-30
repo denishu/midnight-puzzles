@@ -6,8 +6,11 @@ import { TravleGameSession } from '../../games/travle/TravleGameSession';
 import { resolveUserId } from '../../core/auth/ActivityAuth';
 import { validateGuessText } from '../../core/utils/InputValidator';
 import { BaseGameServer, GameServerConfig } from '../../core/web/BaseGameServer';
+import { Logger } from '../../core/utils/Logger';
 
 config();
+
+const log = new Logger('travle-web');
 
 const CONFIG: GameServerConfig = {
   gameType: 'travle',
@@ -49,7 +52,7 @@ async (ctx) => {
   graph = g;
   travle = new TravleGameSession(g, ctx.sessionManager);
   travle.init();
-  console.log('Travle game initialized');
+  log.info('Travle game initialized');
 
   return {
     startSession: async (userId, serverId) => {
@@ -82,7 +85,7 @@ async (ctx) => {
     const id = resolveUserId(req);
     const username = req.authUsername ?? (req.query.username as string | undefined);
     const guildId = req.query.guildId as string | undefined;
-    console.log('[session] puzzle request from:', id);
+    log.debug('[puzzle] request', { id });
 
     const sessionId = await base.getOrCreateSession(id, username, guildId);
     const state = sessionId ? await travle.getState(sessionId) : getAnonState(id);
@@ -107,7 +110,7 @@ async (ctx) => {
     const guildId = req.query.guildId as string | undefined;
     const { country } = req.body;
     const username = req.authUsername ?? req.body.username;
-    console.log('[guess]', id, country);
+    log.debug('[guess]', { id, country });
     const validation = validateGuessText(country);
     if (!validation.ok) { res.status(400).json({ error: validation.error }); return; }
     const cleanCountry = validation.value!;
@@ -168,14 +171,14 @@ async (ctx) => {
       }
     }
 
-    console.log('[hint]', id, '->', closest);
+    log.debug('[hint]', { id, hint: closest });
     res.json({ hint: closest });
   });
 
   // Reset session
   app.post('/game/reset', async (req, res) => {
     const id = resolveUserId(req);
-    console.log('[reset]', id);
+    log.debug('[reset]', { id });
 
     // Drop the cached session id + any anonymous state.
     base.forgetSession(id);

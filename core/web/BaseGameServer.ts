@@ -10,6 +10,7 @@ import { MigrationManager } from '../storage/migrations/migrate';
 import { verifyDiscordToken, issueSessionToken, authMiddleware } from '../auth/ActivityAuth';
 import { rateLimit } from '../auth/RateLimit';
 import { validateConfigOrExit } from '../utils/ConfigValidator';
+import { Logger } from '../utils/Logger';
 
 /** A rate-limit rule applied to a set of paths under /game. */
 export interface RateLimitRule {
@@ -104,9 +105,11 @@ export class BaseGameServer {
   private httpServer?: Server;
   private cleanupTimer?: NodeJS.Timeout;
   private shuttingDown = false;
+  private readonly log: Logger;
 
   constructor(config: GameServerConfig) {
     this.config = config;
+    this.log = new Logger(`${config.gameType}-web`);
     this.app = express();
     this.app.use(express.json());
     // Trust the reverse proxy so req.ip reflects the real client (rate-limit key).
@@ -177,7 +180,7 @@ export class BaseGameServer {
     await this.build(init, registerRoutes);
     this.scheduleDailyCleanup();
     this.httpServer = this.app.listen(this.config.port, () => {
-      console.log(`${this.config.gameType} web running at http://localhost:${this.config.port}`);
+      this.log.info(`running at http://localhost:${this.config.port}`);
     });
     this.installShutdownHandlers();
   }
@@ -205,7 +208,7 @@ export class BaseGameServer {
   async shutdown(signal: string): Promise<void> {
     if (this.shuttingDown) return;
     this.shuttingDown = true;
-    console.log(`[shutdown] ${signal} received, shutting down ${this.config.gameType} web...`);
+    this.log.info(`${signal} received, shutting down...`);
 
     if (this.cleanupTimer) clearTimeout(this.cleanupTimer);
 
@@ -218,12 +221,12 @@ export class BaseGameServer {
     // Drain/close the DB pool.
     try {
       await DatabaseConnectionFactory.close();
-      console.log('[shutdown] database closed');
+      this.log.info('[shutdown] database closed');
     } catch (e) {
-      console.error('[shutdown] error closing database:', e);
+      this.log.error('[shutdown] error closing database', { error: e });
     }
 
-    console.log('[shutdown] done');
+    this.log.info('[shutdown] done');
   }
 
   /** Shared infrastructure (repos, session manager) for game routes. */
@@ -244,7 +247,7 @@ export class BaseGameServer {
     // If the date rolled over but cleanup hasn't fired yet, clear now.
     const today = new Date().toISOString().split('T')[0]!;
     if (today !== this.sessionsDate) {
-      console.log(`[cleanup] Date rolled to ${today}, purging ${this.userSessions.size} stale sessions`);
+      this.log.info(`Date rolled to ${today}, purging ${this.userSessions.size} stale sessions`);
       this.userSessions.clear();
       this.hooks.onDailyCleanup?.();
       this.sessionsDate = today;
@@ -304,7 +307,7 @@ export class BaseGameServer {
 
         if (!response.ok) {
           const err = await response.text();
-          console.error('Discord token exchange error:', response.status, err);
+          this.log.error('Discord token exchange error', { status: response.status, err });
           res.status(500).json({ error: 'token exchange failed' });
           return;
         }
@@ -322,7 +325,7 @@ export class BaseGameServer {
 
         res.json({ access_token, sessionToken });
       } catch (e) {
-        console.error('Token exchange failed:', e);
+        this.log.error('Token exchange failed', { error: e });
         res.status(500).json({ error: 'token exchange failed' });
       }
     });
@@ -332,7 +335,7 @@ export class BaseGameServer {
     const { botTokenEnv, completeEmbed } = this.config;
     this.app.post('/game/complete', async (req, res) => {
       const { message, serverId } = req.body;
-      console.log('[complete] serverId:', serverId, 'message:', message?.substring(0, 50));
+      this.log.debug('[complete] request', { serverId, message: message?.substring(0, 50) });
       if (!message) { res.status(400).json({ error: 'message required' }); return; }
 
       try {
@@ -350,7 +353,7 @@ export class BaseGameServer {
         }
         if (!channelId) { res.status(400).json({ error: 'no channel configured — use /setchannel' }); return; }
 
-        console.log('[complete] Posting to channel:', channelId);
+        this.log.debug('[complete] posting to channel', { channelId });
         const discordResp = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
           method: 'POST',
           headers: {
@@ -368,15 +371,15 @@ export class BaseGameServer {
 
         if (!discordResp.ok) {
           const err = await discordResp.text();
-          console.error('[complete] Discord API error:', discordResp.status, err);
+          this.log.error('[complete] Discord API error', { status: discordResp.status, err });
           res.status(500).json({ error: 'discord api error' });
           return;
         }
 
-        console.log('[complete] Message posted successfully');
+        this.log.info('[complete] message posted successfully');
         res.json({ ok: true });
       } catch (e) {
-        console.error('Failed to post results:', e);
+        this.log.error('[complete] failed to post results', { error: e });
         res.status(500).json({ error: 'failed to post' });
       }
     });
@@ -390,14 +393,14 @@ export class BaseGameServer {
     const msUntilMidnight = tomorrow.getTime() - now.getTime();
 
     this.cleanupTimer = setTimeout(() => {
-      console.log(`[cleanup] Purging ${this.userSessions.size} sessions for ${this.sessionsDate}`);
+      this.log.info(`Purging ${this.userSessions.size} sessions for ${this.sessionsDate}`);
       this.userSessions.clear();
       this.hooks.onDailyCleanup?.();
       this.sessionsDate = new Date().toISOString().split('T')[0]!;
       this.scheduleDailyCleanup();
     }, msUntilMidnight);
 
-    console.log(`[cleanup] Next session purge in ${Math.round(msUntilMidnight / 60000)} minutes`);
+    this.log.info(`Next session purge in ${Math.round(msUntilMidnight / 60000)} minutes`);
   }
 
   /**
@@ -412,7 +415,7 @@ export class BaseGameServer {
         await this.ctx.db.query('SELECT 1');
         res.json({ status: 'ok', game: this.config.gameType });
       } catch (e) {
-        console.error('[health] DB check failed:', e);
+        this.log.error('[health] DB check failed', { error: e });
         res.status(503).json({ status: 'error', game: this.config.gameType });
       }
     });

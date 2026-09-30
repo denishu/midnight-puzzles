@@ -5,8 +5,11 @@ import { DuotrigordleGameSession, DuotrigordleLiveSession } from '../../games/du
 import { resolveUserId } from '../../core/auth/ActivityAuth';
 import { validateWordleGuess } from '../../core/utils/InputValidator';
 import { BaseGameServer, GameServerConfig } from '../../core/web/BaseGameServer';
+import { Logger } from '../../core/utils/Logger';
 
 config();
+
+const log = new Logger('duotrigordle-web');
 
 const CONFIG: GameServerConfig = {
   gameType: 'duotrigordle',
@@ -72,7 +75,7 @@ server.listen(// --- init: build the game object, return session hooks ---
 async (ctx) => {
   const validator = new WordValidator();
   validator.loadWordLists();
-  console.log(`Loaded ${validator.answerCount} answers, ${validator.guessCount} valid guesses`);
+  log.info(`Loaded ${validator.answerCount} answers, ${validator.guessCount} valid guesses`);
 
   duotri = new DuotrigordleGameSession(validator, ctx.sessionManager);
 
@@ -91,7 +94,7 @@ async (ctx) => {
     const id = resolveUserId(req);
     const username = req.authUsername ?? (req.query.username as string | undefined);
     const guildId = req.query.guildId as string | undefined;
-    console.log('[session] state request from:', id);
+    log.debug('[state] request', { id });
 
     const sessionId = await base.getOrCreateSession(id, username, guildId);
     const live = sessionId ? await duotri.getLive(sessionId) : getAnonLive(id);
@@ -105,7 +108,7 @@ async (ctx) => {
     const guildId = req.query.guildId as string | undefined;
     const { word } = req.body;
     const username = req.authUsername ?? req.body.username;
-    console.log('[guess]', id, word);
+    log.debug('[guess]', { id, word });
     const validation = validateWordleGuess(word);
     if (!validation.ok) { res.status(400).json({ isValid: false, error: validation.error }); return; }
     const cleanWord = validation.value!;
@@ -142,7 +145,7 @@ async (ctx) => {
     const guildId = req.query.guildId as string | undefined;
     const { username: bodyUsername } = req.body || {};
     const username = req.authUsername ?? bodyUsername;
-    console.log('[give-up]', id);
+    log.debug('[give-up]', { id });
 
     const sessionId = await base.getOrCreateSession(id, username, guildId);
     let live: DuotrigordleLiveSession | null;
@@ -161,7 +164,7 @@ async (ctx) => {
   // Reset session (testing)
   app.post('/game/reset', async (req, res) => {
     const id = resolveUserId(req);
-    console.log('[reset]', id);
+    log.debug('[reset]', { id });
 
     base.forgetSession(id);
     anonStates.delete(id);
