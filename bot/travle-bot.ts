@@ -120,8 +120,8 @@ export class TravleBot extends BaseBotApplication {
 
             // Build recap embed. Title carries the covered (yesterday's) date;
             // the auto-timestamp signature is stripped so it doesn't show today.
-            const recapDate = yesterday.toLocaleDateString('en-US', { timeZone: 'UTC' });
-            const recapEmbed = EmbedBuilder.createGameEmbed('travle', `🧭 Travle Recap ${recapDate}`);
+            const recapDate = yesterday.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+            const recapEmbed = EmbedBuilder.createGameEmbed('travle', `🧭 Travle Recap · ${recapDate}`);
             const lines = serverSessions.map(s => {
               const guessCount = s.result?.guessCount || s.gameData?.guesses?.length || '?';
               const shortest = s.result?.shortestPath || '?';

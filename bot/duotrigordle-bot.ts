@@ -128,8 +128,8 @@ export class DuotrigordleBot extends BaseBotApplication {
 
             // Build recap embed. Title carries the covered (yesterday's) date;
             // the auto-timestamp signature is stripped so it doesn't show today.
-            const recapDate = yesterday.toLocaleDateString('en-US', { timeZone: 'UTC' });
-            const recapEmbed = EmbedBuilder.createGameEmbed('duotrigordle', `🟧 Duotrigordle Recap ${recapDate}`);
+            const recapDate = yesterday.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+            const recapEmbed = EmbedBuilder.createGameEmbed('duotrigordle', `🟧 Duotrigordle Recap · ${recapDate}`);
             const lines = serverSessions.map(s => {
               const gridsCompleted = s.result?.gridsCompleted ?? s.gameData?.gridsCompleted ?? 0;
               const guessesUsed = s.result?.guessesUsed ?? s.attempts ?? '?';
