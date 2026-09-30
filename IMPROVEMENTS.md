@@ -151,8 +151,8 @@ ideal). Flip the ESLint rule to `error` once close to zero.
   gone from test runs.
 - ✅ Dead code removed (`web/travle/main.js` no longer exists).
 - ✅ "Remove debug logging from production" — handled by #7 (`LOG_LEVEL`).
-- ⬜ Remaining: cover image assets for all 3 bots; end-to-end midnight-message
-  test (the daily recap flow still has no automated coverage).
+- ⬜ Remaining: end-to-end midnight-message test (the daily recap cron flow
+  still has no automated coverage).
 
 ### 11. Act on the Semantle data-quality audit
 `TargetWordQuality.test.ts` flags ~16.5% (331/2001) plural-looking answers. Prune
