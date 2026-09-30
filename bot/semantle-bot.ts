@@ -18,6 +18,7 @@ import { EmbedBuilder } from '../core/discord/EmbedBuilder';
 import { DatabaseConnectionFactory } from '../core/storage/DatabaseConnection';
 import { UserRepository } from '../core/storage/UserRepository';
 import { MigrationManager } from '../core/storage/migrations/migrate';
+import { puzzleNumber } from '../core/utils/puzzleNumber';
 
 // Load environment variables
 config();
@@ -141,11 +142,11 @@ export class SemantleBot extends BaseBotApplication {
             }
             await this.configRepo.updateStreak(guild.id, 'semantle', newCount, yesterdayStr);
 
-            // Build recap embed. Title carries the covered (yesterday's) date,
-            // e.g. "🔮 Semantle Recap 8/22/2026"; the auto-timestamp signature is
-            // stripped so it doesn't show today's post date on a yesterday recap.
-            const recapDate = yesterday.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
-            const recapEmbed = EmbedBuilder.createGameEmbed('semantle', `🔮 Semantle Recap · ${recapDate}`);
+            // Build recap embed. Title carries a Wordle-style puzzle number
+            // (globally unambiguous); the footer keeps its native timestamp
+            // (post time, per-viewer local) and the streak line when > 0.
+            const puzzleNo = puzzleNumber(yesterday);
+            const recapEmbed = EmbedBuilder.createGameEmbed('semantle', `🔮 Yesterday's Recap · Semantle #${puzzleNo}`);
             const lines = serverSessions.map(s => {
               const guessCount = s.attempts || s.gameData?.guesses?.length || '?';
               const won = s.isComplete;
@@ -154,7 +155,6 @@ export class SemantleBot extends BaseBotApplication {
             });
 
             recapEmbed.setDescription(lines.join('\n'));
-            recapEmbed.setTimestamp(null);
             if (newCount > 0) {
               recapEmbed.setFooter({ text: `🔥 Server streak: ${newCount} day${newCount > 1 ? 's' : ''}` });
             }

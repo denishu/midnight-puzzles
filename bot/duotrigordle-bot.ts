@@ -7,6 +7,7 @@
 import { config } from 'dotenv';
 import { BaseBotApplication } from './shared/BaseBotApplication';
 import { Logger } from '../core/utils/Logger';
+import { puzzleNumber } from '../core/utils/puzzleNumber';
 import { GridManager, GRID_COUNT, MAX_GUESSES } from '../games/duotrigordle/GridManager';
 import { WordValidator } from '../games/duotrigordle/WordValidator';
 import { EmbedBuilder } from '../core/discord/EmbedBuilder';
@@ -126,10 +127,11 @@ export class DuotrigordleBot extends BaseBotApplication {
             }
             await this.configRepo.updateStreak(guild.id, 'duotrigordle', newCount, yesterdayStr);
 
-            // Build recap embed. Title carries the covered (yesterday's) date;
-            // the auto-timestamp signature is stripped so it doesn't show today.
-            const recapDate = yesterday.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
-            const recapEmbed = EmbedBuilder.createGameEmbed('duotrigordle', `🟧 Duotrigordle Recap · ${recapDate}`);
+            // Build recap embed. Title carries a Wordle-style puzzle number
+            // (globally unambiguous); the footer keeps its native timestamp and
+            // the streak line when > 0.
+            const puzzleNo = puzzleNumber(yesterday);
+            const recapEmbed = EmbedBuilder.createGameEmbed('duotrigordle', `🟧 Yesterday's Recap · Duotrigordle #${puzzleNo}`);
             const lines = serverSessions.map(s => {
               const gridsCompleted = s.result?.gridsCompleted ?? s.gameData?.gridsCompleted ?? 0;
               const guessesUsed = s.result?.guessesUsed ?? s.attempts ?? '?';
@@ -141,7 +143,6 @@ export class DuotrigordleBot extends BaseBotApplication {
             });
 
             recapEmbed.setDescription(lines.join('\n'));
-            recapEmbed.setTimestamp(null);
             if (newCount > 0) {
               recapEmbed.setFooter({ text: `🔥 Server streak: ${newCount} day${newCount > 1 ? 's' : ''}` });
             }

@@ -2,6 +2,7 @@
 import { config } from 'dotenv';
 import { BaseBotApplication } from './shared/BaseBotApplication';
 import { Logger } from '../core/utils/Logger';
+import { puzzleNumber } from '../core/utils/puzzleNumber';
 import { CountryGraph } from '../games/travle/CountryGraph';
 import { TravleGame, TravleGameState } from '../games/travle/TravleGame';
 import { EmbedBuilder } from '../core/discord/EmbedBuilder';
@@ -118,10 +119,11 @@ export class TravleBot extends BaseBotApplication {
             }
             await this.configRepo.updateStreak(guild.id, 'travle', newCount, yesterdayStr);
 
-            // Build recap embed. Title carries the covered (yesterday's) date;
-            // the auto-timestamp signature is stripped so it doesn't show today.
-            const recapDate = yesterday.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
-            const recapEmbed = EmbedBuilder.createGameEmbed('travle', `🧭 Travle Recap · ${recapDate}`);
+            // Build recap embed. Title carries a Wordle-style puzzle number
+            // (globally unambiguous); the footer keeps its native timestamp and
+            // the streak line when > 0.
+            const puzzleNo = puzzleNumber(yesterday);
+            const recapEmbed = EmbedBuilder.createGameEmbed('travle', `🧭 Yesterday's Recap · Travle #${puzzleNo}`);
             const lines = serverSessions.map(s => {
               const guessCount = s.result?.guessCount || s.gameData?.guesses?.length || '?';
               const shortest = s.result?.shortestPath || '?';
@@ -135,7 +137,6 @@ export class TravleBot extends BaseBotApplication {
             });
 
             recapEmbed.setDescription(lines.join('\n\n'));
-            recapEmbed.setTimestamp(null);
             if (newCount > 0) {
               recapEmbed.setFooter({ text: `🔥 Server streak: ${newCount} day${newCount > 1 ? 's' : ''}` });
             }
