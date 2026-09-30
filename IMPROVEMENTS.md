@@ -151,14 +151,25 @@ Concentrated in the storage repos and server response shapes. Type the API
 request/response bodies (a shared `types.ts` between server and `app-game.js` is
 ideal). Flip the ESLint rule to `error` once close to zero.
 
-### 10. Finish task #20 items + ts-jest deprecation — 🔶 PARTIAL
+### 10. Finish task #20 items + ts-jest deprecation — ✅ DONE
 - ✅ Moved `jest.config.js` `globals['ts-jest']` into `transform`
   (`['ts-jest', { tsconfig: 'tsconfig.json' }]`) — the deprecation warning is
   gone from test runs.
 - ✅ Dead code removed (`web/travle/main.js` no longer exists).
 - ✅ "Remove debug logging from production" — handled by #7 (`LOG_LEVEL`).
-- ⬜ Remaining: end-to-end midnight-message test (the daily recap cron flow
-  still has no automated coverage).
+- ✅ Cover image assets — bots have live Discord avatars; item retired.
+- ✅ End-to-end midnight-recap test — `tests/bot/DailyRecap.e2e.test.ts` drives
+  the real repositories over in-memory SQLite: yesterday's completed sessions
+  are pulled + grouped by server, the streak state machine (start / continue /
+  restart-after-gap / reset-on-loss) is exercised, and `deleteOldSessions(7)`
+  purges >7-day-old rows while keeping recent ones. (The Discord posting itself
+  is not unit-tested — it's a thin `channel.send` loop not worth mocking.)
+
+> Finding surfaced by the test: `ConfigRepository.updateStreak` merges into
+> `custom_settings` via an `UPDATE` (not an upsert), so a server with no
+> `server_configs` row silently drops the streak write. Harmless in practice
+> (servers get a row from `/setchannel`), but a latent gap — a server that never
+> ran `/setchannel` wouldn't accumulate streaks. Candidate follow-up.
 
 ### 11. Act on the Semantle data-quality audit
 `TargetWordQuality.test.ts` flags ~16.5% (331/2001) plural-looking answers. Prune
