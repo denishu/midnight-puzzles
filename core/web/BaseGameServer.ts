@@ -345,7 +345,12 @@ export class BaseGameServer {
         const token = process.env[botTokenEnv];
         if (!token) { res.status(500).json({ error: 'bot token not configured' }); return; }
 
-        let channelId = req.body.channelId;
+        // Resolve the target channel. The server-config channel is
+        // authoritative; a client-supplied channelId is only a last-resort
+        // fallback (it is untrusted — a malicious or Activity client could
+        // otherwise redirect the post to an arbitrary channel or a DM target
+        // with no mutual guild, which just yields a 50001/50278 downstream).
+        let channelId: string | undefined;
         if (serverId) {
           const cfg = await this.ctx.configRepo?.getServerConfig(serverId);
           if (cfg) {
@@ -354,6 +359,7 @@ export class BaseGameServer {
             else if (cfg.channelId) channelId = cfg.channelId;
           }
         }
+        if (!channelId) channelId = req.body.channelId;
         if (!channelId) { res.status(400).json({ error: 'no channel configured — use /setchannel' }); return; }
 
         this.log.debug('[complete] posting to channel', { channelId });
@@ -373,9 +379,35 @@ export class BaseGameServer {
         });
 
         if (!discordResp.ok) {
-          const err = await discordResp.text();
-          this.log.error('[complete] Discord API error', { status: discordResp.status, err });
-          res.status(500).json({ error: 'discord api error' });
+          const raw = await discordResp.text();
+          // Parse Discord's error code if present. Permission / access failures
+          // are expected (bot lacks View/Send/EmbedLinks on the channel, the
+          // channel is a DM target with no mutual guild, or the bot was removed)
+          // and must NOT surface as a 500 — otherwise the Activity shows a
+          // server error for a benign, non-fatal condition.
+          let code: number | undefined;
+          try { code = JSON.parse(raw)?.code; } catch { /* non-JSON body */ }
+          const PERMISSION_CODES = new Set([
+            50001, // Missing Access
+            50013, // Missing Permissions
+            50278, // Cannot send messages to this user (no mutual guilds)
+          ]);
+          const isPermissionError = discordResp.status === 403 || (code !== undefined && PERMISSION_CODES.has(code));
+
+          if (isPermissionError) {
+            // Log at warn (operational, not an error) and tell the client the
+            // result could not be posted — without failing the request.
+            this.log.warn('[complete] cannot post to channel (permission/access)', {
+              status: discordResp.status, code, channelId,
+            });
+            res.status(200).json({ ok: false, posted: false, reason: 'missing_channel_permissions' });
+            return;
+          }
+
+          // Any other non-OK response is an upstream (Discord) failure, not an
+          // internal server fault — surface it as 502 Bad Gateway.
+          this.log.error('[complete] Discord API error', { status: discordResp.status, code, err: raw });
+          res.status(502).json({ error: 'discord api error' });
           return;
         }
 

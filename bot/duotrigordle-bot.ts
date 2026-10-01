@@ -6,6 +6,7 @@
 
 import { config } from 'dotenv';
 import { BaseBotApplication } from './shared/BaseBotApplication';
+import { resolveSendableChannel } from './shared/resolveSendableChannel';
 import { Logger } from '../core/utils/Logger';
 import { puzzleNumber } from '../core/utils/puzzleNumber';
 import { GridManager, GRID_COUNT, MAX_GUESSES } from '../games/duotrigordle/GridManager';
@@ -95,20 +96,13 @@ export class DuotrigordleBot extends BaseBotApplication {
       // Post to all guilds the bot is in
       for (const guild of this.client.guilds.cache.values()) {
         try {
-          // Find the designated channel
+          // Find a channel the bot can actually post embeds to. Validates
+          // View/Send/EmbedLinks on the configured channel before trusting it,
+          // falling back to the system channel or any sendable text channel.
           const serverConfig = await this.configRepo.getServerConfig(guild.id);
-          let channel: any = null;
-
           const configuredChannelId = serverConfig ? this.configRepo.getChannelForGame(serverConfig, 'duotrigordle') : null;
-          if (configuredChannelId) {
-            channel = guild.channels.cache.get(configuredChannelId);
-          }
-          if (!channel) {
-            channel = guild.systemChannel || guild.channels.cache.find(
-              (ch: any) => ch.isTextBased() && ch.permissionsFor(guild.members.me!)?.has('SendMessages')
-            );
-          }
-          if (!channel || !('send' in channel)) continue;
+          const channel = resolveSendableChannel(guild, configuredChannelId, this.logger);
+          if (!channel) continue;
 
           // --- Yesterday's recap ---
           const serverSessions = byServer.get(guild.id) || [];
