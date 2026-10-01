@@ -1,6 +1,7 @@
 // Semantle Frontend — talks to /game endpoints
 
 import { initDiscord, getDiscordUser, getDiscordChannelId, getDiscordGuildId, getSessionToken } from './dist/discord-sdk.js';
+import { spawnConfetti } from '/shared/confetti.js';
 
 let sessionUserId = null;
 let discordChannelId = null;
@@ -162,7 +163,10 @@ function updateStatus(msg) {
 
 function showGameOver(targetWord, guessCount, shouldPost) {
   const overlay = document.getElementById('game-over');
-  document.getElementById('go-title').textContent = '🎉 You found it!';
+  overlay.classList.add('win');
+  document.getElementById('go-title').textContent = '🎉 You found the word!';
+  // Celebrate only on a fresh win, not when reopening a solved puzzle.
+  if (shouldPost) spawnConfetti();
 
   // Find best rank from guesses (excluding the correct answer)
   const bestRanked = guesses

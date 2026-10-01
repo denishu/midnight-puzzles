@@ -8,10 +8,12 @@
 <link rel="stylesheet" href="leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/tokens.css">
 <style>
+:root { --game-accent: var(--secondary); } /* Travle = gold */
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Inter', system-ui, sans-serif; background: #0a0e1a; color: #e0e0e0; height: 100vh; display: flex; overflow: hidden; }
+body { font-family: var(--font-body); background: #0a0e1a; color: #e0e0e0; height: 100vh; display: flex; overflow: hidden; }
 
 /* Map */
 #map-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
@@ -19,7 +21,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #0a0e1a; color: 
 .leaflet-interactive:focus { outline: none; }
 .country-tooltip {
   background: rgba(15, 23, 42, 0.92); color: #f1f5f9; border: 1px solid rgba(96, 165, 250, 0.3);
-  border-radius: 6px; padding: 6px 10px; font-size: 12px; font-family: 'Inter', system-ui, sans-serif;
+  border-radius: 6px; padding: 6px 10px; font-size: 12px; font-family: var(--font-body);
   box-shadow: 0 4px 16px rgba(0,0,0,0.5); backdrop-filter: blur(8px); letter-spacing: 0.02em;
 }
 
@@ -36,16 +38,17 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #0a0e1a; color: 
   border-bottom: 1px solid rgba(59, 130, 246, 0.1);
 }
 #header h1 {
-  font-size: 18px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  font-family: var(--font-display);
+  font-size: 20px; font-weight: 700; letter-spacing: 0.02em;
   color: #94a3b8; margin-bottom: 12px;
 }
-#puzzle-label { font-size: 22px; font-weight: 700; letter-spacing: 0.01em; }
+#puzzle-label { font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: 0.01em; }
 #puzzle-label span { color: #f59e0b; }
 #puzzle-label .arrow { color: #475569; margin: 0 6px; font-weight: 400; }
 #meta {
   font-size: 13px; color: #64748b; margin-top: 10px; letter-spacing: 0.04em; text-transform: uppercase;
 }
-#meta span { color: #94a3b8; font-weight: 600; }
+#meta span { color: #94a3b8; font-weight: 700; }
 
 /* Input */
 #input-area { padding: 16px 20px; border-bottom: 1px solid rgba(59, 130, 246, 0.1); position: relative; overflow: visible; }
@@ -53,7 +56,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #0a0e1a; color: 
 #guess-input {
   flex: 1; min-width: 0; padding: 12px 14px; border-radius: 10px;
   border: 1px solid rgba(59, 130, 246, 0.2); background: rgba(15, 23, 42, 0.6);
-  color: #f1f5f9; font-size: 14px; font-family: 'Inter', system-ui, sans-serif;
+  color: #f1f5f9; font-size: 15px; font-family: var(--font-body);
   outline: none; transition: border-color 0.2s, box-shadow 0.2s;
 }
 #guess-input:focus { border-color: rgba(74, 222, 128, 0.5); box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.1); }
@@ -61,8 +64,9 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #0a0e1a; color: 
 #submit-btn {
   padding: 12px 20px; border-radius: 10px; border: none; flex-shrink: 0;
   background: linear-gradient(135deg, #4ade80, #22c55e); color: #052e16;
-  font-weight: 700; font-size: 13px; cursor: pointer; letter-spacing: 0.03em;
-  text-transform: uppercase; transition: transform 0.1s, box-shadow 0.2s;
+  font-family: var(--font-body);
+  font-weight: 700; font-size: 14px; cursor: pointer; letter-spacing: 0.02em;
+  transition: transform 0.1s, box-shadow 0.2s;
   box-shadow: 0 2px 8px rgba(74, 222, 128, 0.25);
 }
 #submit-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(74, 222, 128, 0.35); }
@@ -85,7 +89,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #0a0e1a; color: 
 }
 #suggestions.active { display: block; }
 .suggestion {
-  padding: 10px 14px; cursor: pointer; font-size: 13px; text-transform: capitalize;
+  padding: 10px 14px; cursor: pointer; font-size: 14px; text-transform: capitalize;
   transition: background 0.15s; border-bottom: 1px solid rgba(59, 130, 246, 0.05);
 }
 .suggestion:last-child { border-bottom: none; }
@@ -133,17 +137,49 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #0a0e1a; color: 
   flex-direction: column; gap: 8px;
 }
 #game-over.active { display: flex; }
-#game-over h2 { font-size: 32px; font-weight: 700; }
+#game-over h2 { font-family: var(--font-display); font-size: 32px; font-weight: 700; }
+
+/* Win state — green, celebratory */
+#game-over.win h2 {
+  color: #4ade80;
+  text-shadow: 0 0 24px rgba(74, 222, 128, 0.55);
+  animation: winIn 0.6s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes winIn {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* Loss state — vibrant, attention-grabbing */
+#game-over.loss { background: radial-gradient(ellipse at center, rgba(127, 29, 29, 0.55), rgba(0,0,0,0.8) 70%); }
+#game-over.loss h2 {
+  color: #f87171;
+  text-shadow: 0 0 24px rgba(239, 68, 68, 0.6);
+  animation: lossIn 0.5s cubic-bezier(.36,.07,.19,.97) both, lossPulse 1.6s ease-in-out 0.5s infinite;
+}
+@keyframes lossIn {
+  0% { transform: scale(0.8); opacity: 0; }
+  40% { transform: scale(1.08); opacity: 1; }
+  55% { transform: scale(1) translateX(-6px); }
+  70% { transform: translateX(5px); }
+  82% { transform: translateX(-3px); }
+  100% { transform: translateX(0); }
+}
+@keyframes lossPulse {
+  0%, 100% { text-shadow: 0 0 24px rgba(239, 68, 68, 0.5); }
+  50% { text-shadow: 0 0 36px rgba(239, 68, 68, 0.9); }
+}
 #game-over p { font-size: 15px; color: #94a3b8; max-width: 400px; text-align: center; line-height: 1.5; }
 #game-over .path { font-size: 12px; color: #64748b; margin-top: 4px; letter-spacing: 0.02em; }
 #go-close {
-  margin-top: 20px; padding: 12px 32px; border-radius: 10px; border: none;
-  background: linear-gradient(135deg, #4ade80, #22c55e); color: #052e16;
-  font-weight: 700; font-size: 13px; cursor: pointer; letter-spacing: 0.03em;
-  text-transform: uppercase; transition: transform 0.1s, box-shadow 0.2s;
-  box-shadow: 0 2px 12px rgba(74, 222, 128, 0.3);
+  margin-top: 20px; padding: 12px 32px; border-radius: var(--radius-md); border: none;
+  background: var(--game-accent); color: #fff;
+  font-family: var(--font-body);
+  font-weight: 700; font-size: 14px; cursor: pointer;
+  transition: transform 0.1s, filter 0.2s;
 }
-#go-close:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(74, 222, 128, 0.4); }
+#go-close:hover { transform: translateY(-1px); filter: brightness(1.1); }
 
 /* Info button & popup */
 #info-btn { font-size: 14px; cursor: pointer; opacity: 0.5; vertical-align: middle; margin-left: 4px; transition: opacity 0.2s; }
@@ -162,7 +198,7 @@ body { font-family: 'Inter', system-ui, sans-serif; background: #0a0e1a; color: 
 <div id="map-panel"><div id="map"></div></div>
 <div id="sidebar">
   <div id="header">
-    <h1>🧭 Travle <span id="info-btn" title="How to play" style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; border:1.5px solid currentColor; font-size:14px; font-weight:400; font-family:serif; text-transform:none;">i</span></h1>
+    <h1>🧭 Travle <span id="info-btn" title="How to play" style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; border:1.5px solid currentColor; font-size:14px; font-weight:400; font-family:var(--font-body); text-transform:none;">i</span></h1>
     <div id="puzzle-label">
       <span id="start-country"></span><span class="arrow">→</span><span id="end-country"></span>
     </div>

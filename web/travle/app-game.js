@@ -1,6 +1,7 @@
 // Travle Frontend — talks to /game endpoints
 
 import { initDiscord, getDiscordUser, getDiscordChannelId, getDiscordGuildId, getSessionToken } from './dist/discord-sdk.js';
+import { spawnConfetti } from '/shared/confetti.js';
 
 // Build headers for /game requests, including the verified session token (JWT)
 // when authenticated via Discord. The server reads identity from this token
@@ -260,7 +261,10 @@ function updateStatus(msg) {
 
 function showGameOver(isWin, feedback, winningPath) {
   const overlay = document.getElementById('game-over');
-  document.getElementById('go-title').textContent = isWin ? '🎉 You solved it!' : '😞 Out of guesses';
+  overlay.classList.toggle('loss', !isWin);
+  overlay.classList.toggle('win', isWin);
+  if (isWin) spawnConfetti();
+  document.getElementById('go-title').textContent = isWin ? '🎉 Connected!' : '😞 Out of guesses';
 
   if (isWin) {
     document.getElementById('go-msg').textContent =

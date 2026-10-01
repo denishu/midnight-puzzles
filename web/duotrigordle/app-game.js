@@ -1,6 +1,7 @@
 // Duotrigordle Frontend — talks to /game endpoints
 
 import { initDiscord, getDiscordUser, getDiscordChannelId, getDiscordGuildId, getSessionToken } from './dist/discord-sdk.js';
+import { spawnConfetti } from '/shared/confetti.js';
 
 let sessionUserId = null;
 let discordChannelId = null;
@@ -233,6 +234,10 @@ async function submitGuess() {
   const input = document.getElementById('guess-input');
   const word = input.value.trim().toLowerCase();
   if (!word || gameOver) return;
+  // Block guessing while the "win impossible" warning is up — the player must
+  // dismiss it (Keep Playing / ✕) first, so its toast never collides with the
+  // invalid-guess toast and the decision is explicit.
+  if (document.getElementById('early-loss').classList.contains('active')) return;
   if (word.length !== 5) {
     updateStatus('Guess must be 5 letters');
     return;
@@ -291,6 +296,9 @@ function updateStatus(msg) {
 
 function showGameOver(isWin, completedGrids, guessesUsed, shouldPost, gaveUp = false) {
   const overlay = document.getElementById('game-over');
+  overlay.classList.toggle('loss', !isWin);
+  overlay.classList.toggle('win', isWin);
+  if (isWin && shouldPost) spawnConfetti();
   document.getElementById('go-title').textContent = isWin ? '🎉 All 32 solved!' : gaveUp ? '🏳️ Gave up' : '😞 Out of guesses';
   document.getElementById('go-msg').textContent = isWin
     ? 'Solved all 32 grids in ' + guessesUsed + '/37 guesses!'
@@ -375,9 +383,12 @@ document.getElementById('guess-input').addEventListener('keydown', (e) => {
 });
 document.getElementById('submit-btn').addEventListener('click', submitGuess);
 document.getElementById('give-up-btn').addEventListener('click', giveUp);
-document.getElementById('early-loss-close').addEventListener('click', () => {
+function dismissEarlyLoss() {
   document.getElementById('early-loss').classList.remove('active');
-});
+  document.getElementById('guess-input').focus();
+}
+document.getElementById('keep-playing-btn').addEventListener('click', dismissEarlyLoss);
+document.getElementById('early-loss-close').addEventListener('click', dismissEarlyLoss);
 document.getElementById('go-close').addEventListener('click', () => {
   document.getElementById('game-over').classList.remove('active');
 });
