@@ -20,11 +20,13 @@ describe('DatabaseConnectionFactory config guard', () => {
     expect(b).toBe(a);
   });
 
-  it('throws when called again with a different config (footgun closed)', async () => {
-    await DatabaseConnectionFactory.create({ type: 'sqlite', database: ':memory:' });
-    await expect(
-      DatabaseConnectionFactory.create({ type: 'sqlite', database: 'other.db' })
-    ).rejects.toThrow(/already initialized with a different config/);
+  it('reuses the existing instance (with a warning) when called again with a different config', async () => {
+    const first = await DatabaseConnectionFactory.create({ type: 'sqlite', database: ':memory:' });
+    // A different config no longer throws — it logs a warning and returns the
+    // already-created instance (matching the proven original behavior). See
+    // IMPROVEMENTS #6 / the prod incident where throwing crashed the bots.
+    const second = await DatabaseConnectionFactory.create({ type: 'sqlite', database: 'other.db' });
+    expect(second).toBe(first);
   });
 
   it('allows a different config after close()', async () => {

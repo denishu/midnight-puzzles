@@ -153,11 +153,16 @@ export class DatabaseConnectionFactory {
   static async create(config: DatabaseConfig): Promise<DatabaseConnection> {
     if (this.instance) {
       if (this.activeConfig && !this.sameConfig(this.activeConfig, config)) {
-        throw new Error(
-          `DatabaseConnectionFactory already initialized with a different config ` +
-          `(${this.activeConfig.type}:${this.activeConfig.database}); refusing to ` +
-          `return it for a request for ${config.type}:${config.database}. ` +
-          `Call DatabaseConnectionFactory.close() before switching databases.`
+        // NOTE: originally this threw, but that proved too aggressive — it
+        // crashed processes in environments where create() is legitimately
+        // called more than once in a process with configs that differ only in
+        // optional fields. Downgraded to a warning: log the mismatch (keeps the
+        // footgun visible) but return the existing instance, matching the
+        // long-proven original behavior. See IMPROVEMENTS #6.
+        this.logger.warn(
+          `DatabaseConnectionFactory reused with a different config ` +
+          `(have ${this.activeConfig.type}:${this.activeConfig.database}, ` +
+          `requested ${config.type}:${config.database}); returning the existing instance.`
         );
       }
       return this.instance;
