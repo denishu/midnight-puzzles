@@ -33,7 +33,8 @@ To revert the games to a single neutral font (e.g. Inter), change the two
 ## Usage
 
 ```html
-<link rel="stylesheet" href="/shared/tokens.css">
+<!-- relative path so it resolves behind the nginx /<game>/ prefix in prod -->
+<link rel="stylesheet" href="shared/tokens.css">
 <!-- then, on the game's own stylesheet or inline: -->
 <style>:root { --game-accent: var(--secondary); } /* Travle */</style>
 ```

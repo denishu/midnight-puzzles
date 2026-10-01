@@ -1,7 +1,7 @@
 // Travle Frontend — talks to /game endpoints
 
 import { initDiscord, getDiscordUser, getDiscordChannelId, getDiscordGuildId, getSessionToken } from './dist/discord-sdk.js';
-import { spawnConfetti } from '/shared/confetti.js';
+import { spawnConfetti } from './shared/confetti.js';
 
 // Build headers for /game requests, including the verified session token (JWT)
 // when authenticated via Discord. The server reads identity from this token
