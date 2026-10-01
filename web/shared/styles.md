@@ -10,16 +10,16 @@ The visual identity is derived from the landing page (`web/landing/styles.css`)
 so clicking from the site into a game feels like one product: a **midnight-purple**
 dark theme with per-game accents.
 
-## Fonts (three roles)
+## Fonts (two roles)
 
 Set in `tokens.css` as CSS variables so they can be changed in one place:
 
 - `--font-display` → **Quicksand** — titles / headers (brand).
-- `--font-body` → **Nunito** — all UI chrome (buttons, inputs, lists, chips).
-- `--font-grid` → neutral mono — dense letter grids (Duotrigordle) where
-  per-glyph clarity matters more than warmth. Decided empirically per game.
+- `--font-body` → **Nunito** — everything else (buttons, inputs, lists, chips,
+  and the Duotrigordle letter grid — Nunito proved legible even there, so no
+  separate grid font is used).
 
-To revert the games to a single neutral font (e.g. Inter), change the three
+To revert the games to a single neutral font (e.g. Inter), change the two
 `--font-*` values in `tokens.css`.
 
 ## Per-game accent

@@ -6,25 +6,23 @@
  * someone just clicked in from. Each game <link>s this file, then overrides only
  * its per-game accent (--game-accent) and, if needed, the grid font.
  *
- * FONTS are intentionally split by ROLE, not forced to one family:
- *   --font-display : Quicksand — titles/headers (brand; legibility not critical)
- *   --font-body    : Nunito    — all UI chrome (buttons, inputs, lists, chips)
- *   --font-grid    : neutral   — dense letter grids (Duotrigordle) where
- *                                per-glyph clarity matters more than warmth.
+ * FONTS are split by ROLE:
+ *   --font-display : Quicksand — titles/headers (brand)
+ *   --font-body    : Nunito    — everything else (UI chrome, lists, grids,
+ *                                inputs). Nunito proved legible even in the
+ *                                dense Duotrigordle letter grid, so no separate
+ *                                grid font is needed.
  *
- * To revert the games to a single neutral font (e.g. Inter), change the three
+ * To revert the games to a single neutral font (e.g. Inter), change the two
  * --font-* values below in this one place.
  * ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Quicksand:wght@500;600;700&display=swap');
 
 :root {
-  /* --- Fonts (3 roles) --- */
+  /* --- Fonts (2 roles) --- */
   --font-display: 'Quicksand', system-ui, sans-serif;
   --font-body: 'Nunito', system-ui, sans-serif;
-  /* Grid font kept neutral for glanceable letter grids; TBD per-game. Defaults
-     to the system stack; Duotrigordle can set this to a mono or Inter. */
-  --font-grid: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Menlo, Consolas, monospace;
 
   /* --- Palette (midnight purple, from the landing page) --- */
   --bg:            hsl(250, 45%, 10%);
