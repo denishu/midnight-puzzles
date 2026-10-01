@@ -1,0 +1,145 @@
+/* =============================================================================
+ * Midnight Puzzles — shared design tokens
+ *
+ * Single source of truth for the suite's visual identity, derived from the
+ * landing page (web/landing/styles.css) so the games feel like the same product
+ * someone just clicked in from. Each game <link>s this file, then overrides only
+ * its per-game accent (--game-accent) and, if needed, the grid font.
+ *
+ * FONTS are intentionally split by ROLE, not forced to one family:
+ *   --font-display : Quicksand — titles/headers (brand; legibility not critical)
+ *   --font-body    : Nunito    — all UI chrome (buttons, inputs, lists, chips)
+ *   --font-grid    : neutral   — dense letter grids (Duotrigordle) where
+ *                                per-glyph clarity matters more than warmth.
+ *
+ * To revert the games to a single neutral font (e.g. Inter), change the three
+ * --font-* values below in this one place.
+ * ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Quicksand:wght@500;600;700&display=swap');
+
+:root {
+  /* --- Fonts (3 roles) --- */
+  --font-display: 'Quicksand', system-ui, sans-serif;
+  --font-body: 'Nunito', system-ui, sans-serif;
+  /* Grid font kept neutral for glanceable letter grids; TBD per-game. Defaults
+     to the system stack; Duotrigordle can set this to a mono or Inter. */
+  --font-grid: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Menlo, Consolas, monospace;
+
+  /* --- Palette (midnight purple, from the landing page) --- */
+  --bg:            hsl(250, 45%, 10%);
+  --bg-elev:       hsl(250, 42%, 13%);   /* slightly raised surface */
+  --card:          hsl(250, 40%, 14%);
+  --card-border:   hsl(250, 30%, 25%);
+  --border:        hsl(250, 30%, 25%);
+
+  --fg:            hsl(260, 20%, 95%);
+  --muted:         hsl(250, 20%, 70%);
+  --faint:         hsl(250, 15%, 55%);
+
+  /* Brand accents (shared). Per-game pages pick one as --game-accent. */
+  --primary:       hsl(270, 70%, 60%);   /* purple  — Semantle */
+  --primary-strong:hsl(270, 70%, 55%);
+  --secondary:     hsl(35, 90%, 60%);    /* gold    — Travle */
+  --accent:        hsl(160, 70%, 50%);   /* green   — Duotrigordle */
+
+  /* Default per-game accent (overridden on each game page). */
+  --game-accent: var(--primary);
+
+  /* Wordle-style tile feedback (shared across games that need it). */
+  --tile-correct: hsl(145, 63%, 45%);
+  --tile-present: hsl(45, 90%, 55%);
+  --tile-absent:  hsl(250, 15%, 30%);
+
+  /* --- Spacing scale --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-8: 48px;
+
+  /* --- Radius --- */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* --- Shadows (tuned for a dark bg) --- */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.55);
+  --glow-accent: 0 0 24px hsla(270, 70%, 60%, 0.25);
+
+  /* --- Transitions --- */
+  --t-fast: 0.15s ease;
+  --t-med: 0.25s ease;
+}
+
+/* --- Base reset-ish helpers (opt-in; games can apply to body) --- */
+.mp-base {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.mp-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* --- Shared components (opt-in via class) --- */
+.mp-input {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: hsla(250, 40%, 14%, 0.6);
+  color: var(--fg);
+  font-size: 15px;
+  font-family: var(--font-body);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.mp-input::placeholder { color: var(--faint); }
+.mp-input:focus {
+  outline: none;
+  border-color: var(--game-accent);
+  box-shadow: 0 0 0 3px hsla(270, 70%, 60%, 0.15);
+}
+
+.mp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--game-accent);
+  color: #fff;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: filter var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast);
+}
+.mp-btn:hover { filter: brightness(1.08); }
+.mp-btn:active { transform: translateY(1px); }
+.mp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.mp-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.mp-overlay {
+  background: var(--bg-elev);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-lg);
+}

@@ -164,6 +164,9 @@ export class BaseGameServer {
     registerRoutes(this.app, this);
 
     // 6. Static serving (after API routes so they take priority).
+    // Shared assets (design tokens, etc.) live in web/shared and are served at
+    // /shared for every game — one source of truth, no per-game copies.
+    this.app.use('/shared', express.static(path.resolve(process.cwd(), 'web/shared')));
     this.app.use(express.static(path.resolve(process.cwd(), this.config.staticDir)));
 
     return this;

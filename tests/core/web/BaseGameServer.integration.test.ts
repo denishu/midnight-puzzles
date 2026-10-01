@@ -129,6 +129,13 @@ describe('BaseGameServer HTTP wiring', () => {
     expect(res.headers['x-ratelimit-limit']).toBeUndefined();
     expect(res.headers['cache-control'] ?? '').not.toContain('no-store');
   });
+
+  it('serves shared assets at /shared (single source of truth for tokens)', async () => {
+    const res = await request(app).get('/shared/tokens.css');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/css/);
+    expect(res.text).toContain('--font-display');
+  });
 });
 
 // NOTE: these run LAST because shutdown() closes the shared DB singleton.
