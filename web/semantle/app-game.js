@@ -1,6 +1,6 @@
 // Semantle Frontend — talks to /game endpoints
 
-import { initDiscord, getDiscordUser, getDiscordChannelId, getDiscordGuildId, getSessionToken } from './dist/discord-sdk.js';
+import { initDiscord, getDiscordUser, getDiscordChannelId, getDiscordGuildId, getSessionToken } from './dist/discord-sdk.js?v=3';
 import { spawnConfetti } from './shared/confetti.js';
 
 let sessionUserId = null;
