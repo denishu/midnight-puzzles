@@ -92,19 +92,39 @@ function renderGrids(grids) {
   area.querySelectorAll('.mini-grid').forEach(el => {
     el.addEventListener('click', () => {
       const idx = parseInt(el.dataset.gridIndex);
-      if (focusedGrid === idx) {
-        focusedGrid = null;
-        el.classList.remove('focused');
-      } else {
-        area.querySelectorAll('.mini-grid.focused').forEach(f => f.classList.remove('focused'));
-        focusedGrid = idx;
-        el.classList.add('focused');
-      }
-      updateKeyboardStates(lastGridsData);
-      renderNumberLine(lastGridsData);
-      document.getElementById('guess-input').focus();
+      focusGrid(idx);
     });
   });
+}
+
+// Toggle focus on a grid (null => global keyboard). Updates the focused
+// highlight, re-filters the keyboard, re-renders the number line, scrolls the
+// grid into view, and focuses the input. Shared by the grid tap and the
+// clickable number-line icons so both behave identically.
+function focusGrid(idx, { scroll = true } = {}) {
+  const area = document.getElementById('grid-area');
+  if (focusedGrid === idx) {
+    focusedGrid = null;
+  } else {
+    focusedGrid = idx;
+  }
+
+  // Sync the .focused class across all grids to the current focusedGrid.
+  area.querySelectorAll('.mini-grid').forEach(g => {
+    const gi = parseInt(g.dataset.gridIndex);
+    g.classList.toggle('focused', gi === focusedGrid);
+  });
+
+  updateKeyboardStates(lastGridsData);
+  renderNumberLine(lastGridsData);
+
+  // Scroll the targeted grid into view (only when focusing, not unfocusing).
+  if (scroll && focusedGrid !== null) {
+    const target = area.querySelector('.mini-grid[data-grid-index="' + focusedGrid + '"]');
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  document.getElementById('guess-input').focus();
 }
 
 function renderNumberLine(grids) {
@@ -112,8 +132,17 @@ function renderNumberLine(grids) {
   line.innerHTML = grids.map(g => {
     const cls = g.isComplete ? ' solved' : '';
     const focused = (focusedGrid === g.gridIndex) ? ' focused' : '';
-    return '<div class="nl-num' + cls + focused + '">' + (g.gridIndex + 1) + '</div>';
+    return '<div class="nl-num' + cls + focused + '" data-grid-index="' + g.gridIndex + '">' + (g.gridIndex + 1) + '</div>';
   }).join('');
+
+  // Clicking a number jumps straight to that word's grid (focus + scroll),
+  // the same behaviour as tapping the grid itself.
+  line.querySelectorAll('.nl-num').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = parseInt(el.dataset.gridIndex);
+      focusGrid(idx);
+    });
+  });
 }
 
 function updateKeyboardStates(grids) {
