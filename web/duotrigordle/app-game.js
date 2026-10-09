@@ -394,8 +394,28 @@ document.getElementById('go-close').addEventListener('click', () => {
 });
 
 // --- Init ---
+
+// On touch devices the on-screen keyboard is the input method, so the native
+// mobile keyboard must not pop up (it would cover the grids and fight the
+// custom keyboard, à la Wordle). readOnly + inputmode=none suppresses the
+// native keyboard while still letting us set input.value programmatically and
+// keep the field focused/styled. Desktop keeps a normal, typeable input so the
+// physical-keyboard keydown handler still works.
+function isTouchDevice() {
+  return (typeof window !== 'undefined') &&
+    (('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
+}
+
+function suppressNativeKeyboardOnTouch() {
+  if (!isTouchDevice()) return;
+  const input = document.getElementById('guess-input');
+  input.setAttribute('readonly', 'readonly');
+  input.setAttribute('inputmode', 'none');
+}
+
 async function boot() {
   buildKeyboard();
+  suppressNativeKeyboardOnTouch();
 
   const discord = await initDiscord();
   if (discord) {
