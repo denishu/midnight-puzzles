@@ -103,6 +103,8 @@ async function submitGuess() {
 
   renderGuesses();
   input.value = '';
+  // Keep focus so the mobile keyboard stays up for the next guess.
+  input.focus();
 
   if (result.isComplete) {
     showGameOver(result.targetWord, guesses.length, true);
@@ -205,6 +207,17 @@ document.getElementById('guess-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); submitGuess(); }
 });
 document.getElementById('submit-btn').addEventListener('click', submitGuess);
+// Keep the native mobile keyboard from flashing: tapping a control normally
+// blurs #guess-input (dismissing the keyboard) and then focus returns, causing
+// a disruptive flash in/out. Preventing the default mousedown/touchstart on
+// these controls stops them from stealing focus from the input, so the keyboard
+// stays up the whole time.
+['submit-btn', 'hint-btn'].forEach(id => {
+  const el = document.getElementById(id);
+  const keepFocus = (e) => e.preventDefault();
+  el.addEventListener('mousedown', keepFocus);
+  el.addEventListener('touchstart', keepFocus, { passive: false });
+});
 document.getElementById('hint-btn').addEventListener('click', async () => {
   const resp = await fetch('/game/hint' + getSessionParam(), { headers: authHeaders() });
   const data = await resp.json();
