@@ -4,7 +4,8 @@
   "description": "A Discord bot suite providing three daily puzzle games: Semantle, Travle, and Duotrigordle",
   "main": "dist/bot/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run build:sdk",
+    "build:sdk": "node scripts/build-sdk.js",
     "start:semantle": "node dist/bot/semantle-bot.js",
     "start:travle": "node dist/bot/travle-bot.js",
     "start:duotrigordle": "node dist/bot/duotrigordle-bot.js",

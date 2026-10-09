@@ -43,13 +43,27 @@ scp data/dictionaries/rankings-840b.json root@YOUR_IP:/root/midnight-puzzles/dat
 scp data/dictionaries/semantic-vectors.txt root@YOUR_IP:/root/midnight-puzzles/data/dictionaries/
 ```
 
-Similarly, Vite-built frontend assets not in git must be copied:
+The Discord SDK bundle (`web/*/dist/discord-sdk.js`) is **built automatically** by
+`npm run build` — the `build` script runs `tsc && npm run build:sdk`, which bundles
+`web/travle/discord-sdk.js` with Vite and copies the result to all three games. As long
+as you run `npm run build` on the server (or anywhere the repo + devDependencies are
+installed), the bundle is regenerated from source and can never go stale.
+
+> Requires `vite` (a devDependency). If the server was set up with `npm install
+> --omit=dev`, run `npm install` first so the build tooling is present.
+
+Only if you build the frontend on a **different** machine than the server do you need to
+copy the bundles over manually:
 
 ```bash
 scp web/travle/dist/discord-sdk.js root@YOUR_IP:/root/midnight-puzzles/web/travle/dist/
 scp web/semantle/dist/discord-sdk.js root@YOUR_IP:/root/midnight-puzzles/web/semantle/dist/
 scp web/duotrigordle/dist/discord-sdk.js root@YOUR_IP:/root/midnight-puzzles/web/duotrigordle/dist/
 ```
+
+> If you edit `web/*/app-game.js` to import a new SDK export, bump the `?v=` query on the
+> `discord-sdk.js` import (and the `app-game.js?v=` tag in `index.html`) so browsers fetch
+> the fresh bundle instead of a cached copy.
 
 ---
 
@@ -194,7 +208,12 @@ Register Activity URLs under URL Mappings for each app:
 
 ```bash
 git pull
-npm run build
-# Re-copy any non-TypeScript assets if changed
+npm run build   # tsc + regenerates & copies the Discord SDK bundle to all three games
+# Re-copy any non-TypeScript assets (.sql, data files) if changed
 pm2 restart all
 ```
+
+> `npm run build` now rebuilds the frontend SDK bundle automatically, so a wrapper change
+> in `discord-sdk.js` can't ship against a stale bundle. If you added/renamed an SDK export
+> consumed by `app-game.js`, also bump the `?v=` cache-busters (see the frontend-assets note
+> above) so clients fetch the new bundle.
