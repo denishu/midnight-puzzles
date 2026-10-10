@@ -311,10 +311,15 @@ body {
   .nl-num { width: 18px; height: 16px; font-size: 9px; }
   #input-area { padding: 8px 12px; }
   #guess-input { padding: 10px 12px; font-size: 13px; }
-  #keyboard { padding: 2px 4px 4px; }
-  .kb-key { min-width: 22px; height: 28px; font-size: 10px; }
-  .kb-key.wide { min-width: 36px; font-size: 9px; }
-  .kb-row { gap: 2px; margin-bottom: 2px; }
+  #keyboard { padding: 6px 4px 8px; }
+  /* Bigger, easier-to-tap keys on mobile only. Keys flex to fill the row width
+     (10 keys can't each be ~2x wide without overflowing a phone), and height +
+     font size are roughly doubled, which is what actually drives tap accuracy. */
+  .kb-key {
+    flex: 1 1 0; min-width: 0; height: 52px; font-size: 20px; border-radius: 7px;
+  }
+  .kb-key.wide { flex: 1.6 1 0; font-size: 15px; }
+  .kb-row { gap: 5px; margin-bottom: 5px; }
   #status-bar { bottom: 140px; }
   #early-loss { bottom: 140px; max-width: 90%; }
   #game-over h2 { font-size: 22px; }
@@ -371,6 +376,6 @@ body {
   The on-screen keyboard shows the best status for each letter across all grids. Tap a grid to filter the keyboard to just that word — tap again to go back to the global view.
 </div>
 
-<script type="module" src="app-game.js?v=9"></script>
+<script type="module" src="app-game.js?v=10"></script>
 </body>
 </html>
