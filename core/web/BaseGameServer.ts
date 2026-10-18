@@ -3,6 +3,7 @@ import type { Server } from 'http';
 import path from 'path';
 import { DatabaseConnection, DatabaseConnectionFactory } from '../storage/DatabaseConnection';
 import { GameStateRepository } from '../storage/GameStateRepository';
+import { StreakRepository } from '../storage/StreakRepository';
 import { UserRepository } from '../storage/UserRepository';
 import { ConfigRepository } from '../storage/ConfigRepository';
 import { SessionManager } from '../auth/SessionManager';
@@ -107,6 +108,12 @@ export class BaseGameServer {
   private shuttingDown = false;
   private readonly log: Logger;
 
+  // Public leaderboard response cache (data only changes once/day at the
+  // nightly streak update, so a short TTL is plenty and shields the DB from
+  // unauthenticated traffic). Keyed by game type.
+  private leaderboardCache: Map<string, { at: number; body: any }> = new Map();
+  private static readonly LEADERBOARD_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
   constructor(config: GameServerConfig) {
     this.config = config;
     this.log = new Logger(`${config.gameType}-web`);
@@ -156,6 +163,7 @@ export class BaseGameServer {
 
     // 4. Common middleware + routes.
     this.installHealthCheck();
+    this.installLeaderboard();
     this.installCommonMiddleware();
     this.installTokenExchange();
     this.installCompleteRoute();
@@ -436,6 +444,79 @@ export class BaseGameServer {
     }, msUntilMidnight);
 
     this.log.info(`Next session purge in ${Math.round(msUntilMidnight / 60000)} minutes`);
+  }
+
+  /**
+   * Public, read-only leaderboard endpoint: GET /api/leaderboard?game=<type>.
+   *
+   * Registered OUTSIDE the /game middleware stack, so it is intentionally
+   * unauthenticated (the landing page fetches it from the browser with no
+   * Discord session). It exposes only non-PII aggregates: per-server longest
+   * streaks plus the server's public name and icon hash. No user handles.
+   *
+   * Hardening for an unauthenticated endpoint:
+   *  - validates the `game` param against a fixed allowlist (no SQL on
+   *    arbitrary input; the repo also parameterizes),
+   *  - serves from a short-TTL in-process cache (data changes once/day), so
+   *    repeated hits don't touch the DB,
+   *  - sends permissive CORS + cache headers so the static landing page on a
+   *    different origin can consume it and the browser/CDN can cache it.
+   */
+  private installLeaderboard(): void {
+    const ALLOWED_GAMES = new Set(['semantle', 'travle', 'duotrigordle']);
+
+    this.app.get('/api/leaderboard', async (req, res) => {
+      const game = String(req.query.game || this.config.gameType);
+      if (!ALLOWED_GAMES.has(game)) {
+        res.status(400).json({ error: 'invalid game' });
+        return;
+      }
+
+      // CORS: the landing page is served from a different origin than the game
+      // servers, and this is public, non-sensitive data — allow any origin.
+      res.set('Access-Control-Allow-Origin', '*');
+      res.set('Cache-Control', 'public, max-age=300');
+
+      // Serve from cache when fresh.
+      const cached = this.leaderboardCache.get(game);
+      const now = Date.now();
+      if (cached && now - cached.at < BaseGameServer.LEADERBOARD_TTL_MS) {
+        res.json(cached.body);
+        return;
+      }
+
+      try {
+        const streakRepo = new StreakRepository(this.ctx.db);
+        const [top, lastUpdated] = await Promise.all([
+          streakRepo.getTopServers(game, 5),
+          streakRepo.getServersLastUpdated(game),
+        ]);
+        const body = {
+          game,
+          // Real last-write time of the streak data (null if none yet) -- NOT
+          // the response-build time -- so the page's "Updated <date>" stays
+          // honest even if a nightly run was skipped.
+          updatedAt: lastUpdated,
+          servers: top.map((s, i) => ({
+            rank: i + 1,
+            // The raw guild id is a public snowflake; include it so the client
+            // can build the icon URL, but expose no user-level data.
+            serverId: s.serverId,
+            name: s.guildName || 'A Discord Server',
+            iconHash: s.iconHash,          // null -> client renders a fallback
+            maxStreak: s.maxCount,
+            // When the best streak peaked (YYYY-MM-DD); client shows "Nd ago".
+            maxDate: s.maxDate,
+            currentStreak: s.currentCount,
+          })),
+        };
+        this.leaderboardCache.set(game, { at: now, body });
+        res.json(body);
+      } catch (e) {
+        this.log.error('[leaderboard] query failed', { game, error: e });
+        res.status(500).json({ error: 'leaderboard unavailable' });
+      }
+    });
   }
 
   /**
