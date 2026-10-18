@@ -16,6 +16,9 @@ import { DatabaseConnectionFactory } from '../core/storage/DatabaseConnection';
 import { UserRepository } from '../core/storage/UserRepository';
 import { GameStateRepository } from '../core/storage/GameStateRepository';
 import { ConfigRepository } from '../core/storage/ConfigRepository';
+import { StreakRepository } from '../core/storage/StreakRepository';
+import { updateStreaks } from './shared/updateStreaks';
+import { makeStreakHandler } from './shared/streakCommand';
 import { MigrationManager } from '../core/storage/migrations/migrate';
 
 // Load environment variables
@@ -26,6 +29,7 @@ export class DuotrigordleBot extends BaseBotApplication {
   private userRepo!: UserRepository;
   private sessionRepo!: GameStateRepository;
   private configRepo!: ConfigRepository;
+  private streakRepo!: StreakRepository;
   // In-memory cache: cleared daily at midnight
   private userSessions: Map<string, string> = new Map();
 
@@ -49,6 +53,7 @@ export class DuotrigordleBot extends BaseBotApplication {
     this.userRepo = new UserRepository(db);
     this.sessionRepo = new GameStateRepository(db);
     this.configRepo = new ConfigRepository(db);
+    this.streakRepo = new StreakRepository(db);
 
     // Initialize word validator and load word lists
     this.validator = new WordValidator();
@@ -88,6 +93,10 @@ export class DuotrigordleBot extends BaseBotApplication {
 
       // Generate today's puzzle for the announcement
       const _puzzle = GridManager.generateDailyPuzzle(today, this.validator);
+
+      // Update persisted streaks BEFORE the purge, while the completions window
+      // is still present.
+      await updateStreaks('duotrigordle', this.sessionRepo, this.streakRepo, this.client.guilds.cache.values(), this.logger);
 
       // Clean up old DB sessions and in-memory cache before posting
       await this.sessionRepo.deleteOldSessions(7);
@@ -179,6 +188,12 @@ export class DuotrigordleBot extends BaseBotApplication {
       name: 'help',
       description: 'Learn how to play Duotrigordle',
       handler: this.handleHelpCommand.bind(this),
+    });
+
+    this.commandRegistry.register({
+      name: 'streak',
+      description: 'See your Duotrigordle streak and the server record',
+      handler: makeStreakHandler('duotrigordle', this.streakRepo, this.logger),
     });
 
     this.commandRegistry.register({

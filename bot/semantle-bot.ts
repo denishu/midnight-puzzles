@@ -18,6 +18,9 @@ import { ConfigRepository } from '../core/storage/ConfigRepository';
 import { EmbedBuilder } from '../core/discord/EmbedBuilder';
 import { DatabaseConnectionFactory } from '../core/storage/DatabaseConnection';
 import { UserRepository } from '../core/storage/UserRepository';
+import { StreakRepository } from '../core/storage/StreakRepository';
+import { updateStreaks } from './shared/updateStreaks';
+import { makeStreakHandler } from './shared/streakCommand';
 import { MigrationManager } from '../core/storage/migrations/migrate';
 import { puzzleNumber } from '../core/utils/puzzleNumber';
 
@@ -30,6 +33,7 @@ export class SemantleBot extends BaseBotApplication {
   private userRepo!: UserRepository;
   private sessionRepo!: GameStateRepository;
   private configRepo!: ConfigRepository;
+  private streakRepo!: StreakRepository;
   // Maps userId -> sessionId for the current day
   private userSessions: Map<string, string> = new Map();
 
@@ -66,6 +70,7 @@ export class SemantleBot extends BaseBotApplication {
     this.userRepo = new UserRepository(db);
     this.sessionRepo = gameStateRepo;
     this.configRepo = new ConfigRepository(db);
+    this.streakRepo = new StreakRepository(db);
 
     this.semantleGame = new SemantleGame(semanticEngine, sessionManager, dailyPuzzleRepo);
     await this.semantleGame.initialize();
@@ -103,6 +108,10 @@ export class SemantleBot extends BaseBotApplication {
         list.push(session);
         byServer.set(session.serverId, list);
       }
+
+      // Update persisted streaks (player + server scopes) BEFORE the purge,
+      // while the retention window of completions is still present.
+      await updateStreaks('semantle', this.sessionRepo, this.streakRepo, this.client.guilds.cache.values(), this.logger);
 
       // Clean up old DB sessions and in-memory cache before posting
       await this.sessionRepo.deleteOldSessions(7);
@@ -206,6 +215,12 @@ export class SemantleBot extends BaseBotApplication {
       name: 'hint',
       description: 'Get a hint for your current Semantle game',
       handler: this.handleHintCommand.bind(this)
+    });
+
+    this.commandRegistry.register({
+      name: 'streak',
+      description: 'See your Semantle streak and the server record',
+      handler: makeStreakHandler('semantle', this.streakRepo, this.logger)
     });
 
     this.commandRegistry.register({

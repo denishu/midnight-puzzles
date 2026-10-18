@@ -11,6 +11,9 @@ import { DatabaseConnectionFactory } from '../core/storage/DatabaseConnection';
 import { UserRepository } from '../core/storage/UserRepository';
 import { GameStateRepository } from '../core/storage/GameStateRepository';
 import { ConfigRepository } from '../core/storage/ConfigRepository';
+import { StreakRepository } from '../core/storage/StreakRepository';
+import { updateStreaks } from './shared/updateStreaks';
+import { makeStreakHandler } from './shared/streakCommand';
 import { MigrationManager } from '../core/storage/migrations/migrate';
 // @ts-expect-error node-cron has no type declarations
 import cron from 'node-cron';
@@ -23,6 +26,7 @@ export class TravleBot extends BaseBotApplication {
   private userRepo!: UserRepository;
   private sessionRepo!: GameStateRepository;
   private configRepo!: ConfigRepository;
+  private streakRepo!: StreakRepository;
   // In-memory cache: userId -> TravleGameState
   private cache: Map<string, TravleGameState> = new Map();
 
@@ -43,6 +47,7 @@ export class TravleBot extends BaseBotApplication {
     this.userRepo = new UserRepository(db);
     this.sessionRepo = new GameStateRepository(db);
     this.configRepo = new ConfigRepository(db);
+    this.streakRepo = new StreakRepository(db);
     this.graph = new CountryGraph();
     await this.graph.initialize();
     this.travleGame = new TravleGame(this.graph);
@@ -79,6 +84,10 @@ export class TravleBot extends BaseBotApplication {
 
       // Generate today's puzzle
       const _puzzle = this.travleGame.genPuzzle(today);
+
+      // Update persisted streaks BEFORE the purge, while the completions window
+      // is still present.
+      await updateStreaks('travle', this.sessionRepo, this.streakRepo, this.client.guilds.cache.values(), this.logger);
 
       // Clean up old DB sessions and in-memory cache before posting
       await this.sessionRepo.deleteOldSessions(7);
@@ -161,6 +170,7 @@ export class TravleBot extends BaseBotApplication {
     this.commandRegistry.register({ name: 'guess', description: 'Guess a country', options: [{ name: 'country', description: 'Country name', type: 'STRING', required: true }], handler: this.handleGuess.bind(this) });
     this.commandRegistry.register({ name: 'results', description: 'Share your Travle results', handler: this.handleResults.bind(this) });
     this.commandRegistry.register({ name: 'help', description: 'Learn how to play Travle', handler: this.handleHelp.bind(this) });
+    this.commandRegistry.register({ name: 'streak', description: 'See your Travle streak and the server record', handler: makeStreakHandler('travle', this.streakRepo, this.logger) });
     this.commandRegistry.register({ name: 'setchannel', description: 'Set this channel for daily puzzle messages (admin only)', handler: this.handleSetChannel.bind(this) });
   }
 
