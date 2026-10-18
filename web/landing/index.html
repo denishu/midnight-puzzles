@@ -21,6 +21,7 @@
     </div>
     <nav class="header-nav">
       <a href="#bots">Our Bots</a>
+      <a href="#leaderboard">Leaderboard</a>
       <a href="#about">About Us</a>
       <a href="https://github.com/denishu/midnight-puzzles" target="_blank" rel="noreferrer">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
@@ -127,6 +128,40 @@
   </div>
 </section>
 
+<!-- LEADERBOARD -->
+<section id="leaderboard" class="leaderboard-section">
+  <div class="section-inner">
+    <div class="section-header">
+      <h2>Longest Streaks</h2>
+      <p>Can your server top the charts?</p>
+      <span class="lb-updated" id="lb-updated" hidden></span>
+    </div>
+    <div class="leaderboard-grid">
+      <div class="lb-card" data-game="semantle">
+        <div class="lb-card-head">
+          <img src="assets/semantle_logo.png" alt="" class="lb-game-logo">
+          <h3>Semantle</h3>
+        </div>
+        <ol class="lb-list" data-list="semantle"><li class="lb-loading">Loading…</li></ol>
+      </div>
+      <div class="lb-card" data-game="travle">
+        <div class="lb-card-head">
+          <img src="assets/travle_logo.png" alt="" class="lb-game-logo">
+          <h3>Travle</h3>
+        </div>
+        <ol class="lb-list" data-list="travle"><li class="lb-loading">Loading…</li></ol>
+      </div>
+      <div class="lb-card" data-game="duotrigordle">
+        <div class="lb-card-head">
+          <img src="assets/duotrigordle_logo.png" alt="" class="lb-game-logo">
+          <h3>Duotrigordle</h3>
+        </div>
+        <ol class="lb-list" data-list="duotrigordle"><li class="lb-loading">Loading…</li></ol>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ABOUT -->
 <section id="about" class="about-section">
   <div class="section-inner">
@@ -191,6 +226,154 @@ function closePreview() {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closePreview();
 });
+
+// --- Leaderboard -----------------------------------------------------------
+// Each game server is reverse-proxied on this same origin under its own path
+// (/semantle, /travle, /duotrigordle -> localhost:3001/3002/3003 with the
+// prefix stripped), and each exposes a public GET /api/leaderboard?game=X.
+// So we fetch same-origin from each game's own path. Any failure degrades
+// gracefully to a friendly empty state rather than breaking the page.
+(function initLeaderboard() {
+  var GAMES = ['semantle', 'travle', 'duotrigordle'];
+
+  function iconUrl(serverId, iconHash) {
+    if (!iconHash) return null;
+    var ext = iconHash.indexOf('a_') === 0 ? 'gif' : 'png';
+    return 'https://cdn.discordapp.com/icons/' + serverId + '/' + iconHash + '.' + ext + '?size=64';
+  }
+
+  // Initials fallback for servers without a custom icon.
+  function fallbackBadge(name) {
+    var initials = (name || '?').trim().split(/\s+/).slice(0, 2)
+      .map(function (w) { return w[0]; }).join('').toUpperCase() || '?';
+    var span = document.createElement('span');
+    span.className = 'lb-icon lb-icon-fallback';
+    span.textContent = initials;
+    return span;
+  }
+
+  function medal(rank) {
+    return rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : (rank + '.');
+  }
+
+  // Relative "N days ago" for a YYYY-MM-DD date (when a best streak peaked).
+  // Returns '' if the date is missing/unparseable so we can skip the label.
+  function relativeDays(dateStr) {
+    if (!dateStr) return '';
+    var then = new Date(dateStr + 'T00:00:00Z');
+    if (isNaN(then.getTime())) return '';
+    var startOfToday = new Date();
+    startOfToday.setUTCHours(0, 0, 0, 0);
+    var days = Math.round((startOfToday.getTime() - then.getTime()) / 86400000);
+    if (days <= 0) return 'today';
+    if (days === 1) return 'yesterday';
+    if (days < 30) return days + 'd ago';
+    if (days < 365) return Math.floor(days / 30) + 'mo ago';
+    return Math.floor(days / 365) + 'y ago';
+  }
+
+  // Absolute date like "Oct 18, 2026" for the section "Updated" label.
+  function formatDate(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  // Populate the section-level "Updated <date>" from the freshest game feed.
+  var latestUpdatedMs = 0;
+  function noteUpdated(iso) {
+    if (!iso) return;
+    var t = new Date(iso).getTime();
+    if (isNaN(t) || t <= latestUpdatedMs) return;
+    latestUpdatedMs = t;
+    var el = document.getElementById('lb-updated');
+    if (el) {
+      el.textContent = 'Updated ' + formatDate(iso);
+      el.hidden = false;
+    }
+  }
+
+  function render(game, data) {
+    var list = document.querySelector('.lb-list[data-list="' + game + '"]');
+    if (!list) return;
+    list.innerHTML = '';
+
+    var servers = (data && data.servers) || [];
+    if (!servers.length) {
+      var empty = document.createElement('li');
+      empty.className = 'lb-empty';
+      empty.textContent = 'No streaks yet — be the first!';
+      list.appendChild(empty);
+      return;
+    }
+
+    servers.forEach(function (s) {
+      var li = document.createElement('li');
+      li.className = 'lb-row';
+
+      var rank = document.createElement('span');
+      rank.className = 'lb-rank';
+      rank.textContent = medal(s.rank);
+      li.appendChild(rank);
+
+      var url = iconUrl(s.serverId, s.iconHash);
+      if (url) {
+        var img = document.createElement('img');
+        img.className = 'lb-icon';
+        img.src = url;
+        img.alt = '';
+        img.loading = 'lazy';
+        // If the CDN image fails (e.g. icon changed), swap to the initials badge.
+        img.onerror = function () { img.replaceWith(fallbackBadge(s.name)); };
+        li.appendChild(img);
+      } else {
+        li.appendChild(fallbackBadge(s.name));
+      }
+
+      var name = document.createElement('span');
+      name.className = 'lb-name';
+      name.textContent = s.name;
+      li.appendChild(name);
+
+      var streak = document.createElement('span');
+      streak.className = 'lb-streak';
+      streak.textContent = '🔥 ' + s.maxStreak;
+      streak.title = s.maxStreak + ' day best streak';
+      li.appendChild(streak);
+
+      // When the best streak peaked, relative (e.g. "12d ago"). Skipped if the
+      // date is missing.
+      var when = relativeDays(s.maxDate);
+      if (when) {
+        var ago = document.createElement('span');
+        ago.className = 'lb-when';
+        ago.textContent = when;
+        ago.title = 'Best streak set ' + when;
+        li.appendChild(ago);
+      }
+
+      list.appendChild(li);
+    });
+  }
+
+  function renderError(game) {
+    var list = document.querySelector('.lb-list[data-list="' + game + '"]');
+    if (!list) return;
+    list.innerHTML = '';
+    var li = document.createElement('li');
+    li.className = 'lb-empty';
+    li.textContent = 'Leaderboard unavailable right now.';
+    list.appendChild(li);
+  }
+
+  GAMES.forEach(function (game) {
+    fetch('/' + game + '/api/leaderboard?game=' + game, { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+      .then(function (data) { render(game, data); noteUpdated(data && data.updatedAt); })
+      .catch(function () { renderError(game); });
+  });
+})();
 </script>
 
 </body>
