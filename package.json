@@ -28,7 +28,8 @@
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "migrate": "node dist/core/storage/migrations/migrate.js",
-    "migrate:dev": "ts-node core/storage/migrations/migrate.ts"
+    "migrate:dev": "ts-node core/storage/migrations/migrate.ts",
+    "seed:streaks": "ts-node scripts/seed-streaks.ts"
   },
   "keywords": [
     "discord",
