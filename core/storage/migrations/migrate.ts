@@ -164,8 +164,58 @@ export class MigrationManager {
         name: 'add_channel_id_to_server_configs',
         up: 'ALTER TABLE server_configs ADD COLUMN channel_id TEXT',
         down: 'ALTER TABLE server_configs DROP COLUMN channel_id;'
+      },
+      {
+        version: 3,
+        name: 'add_streaks_table',
+        up: this.getStreaksSchema(),
+        down: 'DROP TABLE IF EXISTS streaks;'
       }
     ];
+  }
+
+  /**
+   * Migration v3: persisted streak state.
+   *
+   * Why persisted (not computed on the fly): game_sessions are purged after 7
+   * days (deleteOldSessions(7) in the nightly job), so any streak longer than a
+   * week cannot be reconstructed from raw sessions. We therefore carry current
+   * and all-time-max counts per scope.
+   *
+   * Two scopes live in one table, discriminated by `scope`:
+   *   - 'server': one row per (server_id, game_type); user_id = '' sentinel.
+   *   - 'player': one row per (server_id, user_id, game_type).
+   *
+   * user_id uses an EMPTY-STRING sentinel (never NULL) for server rows because
+   * NULL is treated as distinct in a composite PRIMARY KEY on both SQLite and
+   * Postgres, which would defeat the uniqueness we rely on for upserts.
+   *
+   * guild_name / icon_hash are denormalized onto server rows so the public
+   * leaderboard can render a server's name + icon without a Discord API call
+   * (the browser loads the icon straight from Discord's CDN by hash).
+   *
+   * SQL kept to the portable subset (TEXT/INTEGER, no engine-specific
+   * defaults) so it applies cleanly on SQLite today and Postgres later.
+   */
+  private getStreaksSchema(): string {
+    return `
+CREATE TABLE IF NOT EXISTS streaks (
+  scope TEXT NOT NULL,
+  server_id TEXT NOT NULL,
+  user_id TEXT NOT NULL DEFAULT '',
+  game_type TEXT NOT NULL,
+  current_count INTEGER NOT NULL DEFAULT 0,
+  current_last_date TEXT,
+  max_count INTEGER NOT NULL DEFAULT 0,
+  max_date TEXT,
+  guild_name TEXT,
+  icon_hash TEXT,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (scope, server_id, user_id, game_type)
+);
+CREATE INDEX IF NOT EXISTS idx_streaks_top_servers ON streaks(game_type, scope, max_count);
+CREATE INDEX IF NOT EXISTS idx_streaks_player ON streaks(scope, server_id, user_id, game_type);
+`.trim();
   }
 
   private getInitialSchema(): string {

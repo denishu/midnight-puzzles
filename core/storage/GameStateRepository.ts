@@ -349,6 +349,35 @@ export class GameStateRepository {
   }
 
   /**
+   * Get all completed sessions for a game type within the last `days` days
+   * (inclusive of today back to today-days+1), joined with username. Used by the
+   * nightly streak update, which needs several days of completions still in the
+   * retention window so it can advance streaks gap-tolerantly after a short
+   * outage. Completion uses the same dual check as the recap (boolean column OR
+   * game_data JSON marker).
+   */
+  async getCompletedSessionsInWindow(gameType: string, days: number): Promise<Array<GameSession & { username: string }>> {
+    try {
+      const cutoff = new Date();
+      cutoff.setUTCDate(cutoff.getUTCDate() - days);
+      const cutoffStr = cutoff.toISOString().split('T')[0];
+      const sql = `
+        SELECT gs.*, u.username
+        FROM game_sessions gs
+        JOIN users u ON gs.user_id = u.discord_id
+        WHERE gs.game_type = ? AND gs.puzzle_date >= ?
+          AND (gs.is_complete = 1 OR gs.game_data LIKE '%"isComplete":true%' OR gs.game_data LIKE '%"isComplete": true%')
+        ORDER BY gs.puzzle_date ASC
+      `;
+      const rows = await this.db.query<any>(sql, [gameType, cutoffStr]);
+      return rows.map(row => ({ ...this.mapRowToSession(row), username: row.username }));
+    } catch (error) {
+      this.logger.error('Error getting completed sessions in window:', { gameType, days, error });
+      throw error;
+    }
+  }
+
+  /**
    * Map database row to GameSession object
    */
   private mapRowToSession(row: any): GameSession {
