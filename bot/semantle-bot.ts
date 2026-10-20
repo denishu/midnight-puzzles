@@ -19,7 +19,7 @@ import { EmbedBuilder } from '../core/discord/EmbedBuilder';
 import { DatabaseConnectionFactory } from '../core/storage/DatabaseConnection';
 import { UserRepository } from '../core/storage/UserRepository';
 import { StreakRepository } from '../core/storage/StreakRepository';
-import { updateStreaks } from './shared/updateStreaks';
+import { updateStreaks, clientGuildResolver } from './shared/updateStreaks';
 import { makeStreakHandler } from './shared/streakCommand';
 import { MigrationManager } from '../core/storage/migrations/migrate';
 import { puzzleNumber } from '../core/utils/puzzleNumber';
@@ -111,7 +111,7 @@ export class SemantleBot extends BaseBotApplication {
 
       // Update persisted streaks (player + server scopes) BEFORE the purge,
       // while the retention window of completions is still present.
-      await updateStreaks('semantle', this.sessionRepo, this.streakRepo, this.client.guilds.cache.values(), this.logger);
+      await updateStreaks('semantle', this.sessionRepo, this.streakRepo, clientGuildResolver(this.client, this.logger), this.logger);
 
       // Clean up old DB sessions and in-memory cache before posting
       await this.sessionRepo.deleteOldSessions(7);

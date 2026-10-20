@@ -11,7 +11,7 @@ import { GameStateRepository } from '../../core/storage/GameStateRepository';
 import { UserRepository } from '../../core/storage/UserRepository';
 import { StreakRepository } from '../../core/storage/StreakRepository';
 import { MigrationManager } from '../../core/storage/migrations/migrate';
-import { updateStreaks, GuildLike } from '../../bot/shared/updateStreaks';
+import { updateStreaks, GuildLike, GuildResolver } from '../../bot/shared/updateStreaks';
 import { Logger } from '../../core/utils/Logger';
 
 const GAME = 'travle';
@@ -231,5 +231,59 @@ describe('updateStreaks nightly helper (gap-tolerant, over real sessions)', () =
 
     const player = await streakRepo.getPlayerStreak('U1', 'S1', GAME);
     expect(player!.currentCount).toBe(3);
+  });
+
+  it('names a streak-server that was NOT in the gateway cache via the resolver (REST fallback)', async () => {
+    // The regression: the server has sessions (so a streak row is created) but
+    // is absent from the cache at run time. A resolver that can fetch it by id
+    // must still populate its name/icon -- otherwise the row stays "A Discord
+    // Server" on the leaderboard.
+    await seed('U1', 'S9', dateNDaysAgo(2));
+    await seed('U1', 'S9', dateNDaysAgo(1));
+
+    const fetched: string[] = [];
+    const resolver: GuildResolver = {
+      async resolve(id: string): Promise<GuildLike | null> {
+        fetched.push(id);
+        // S9 is not in any cache snapshot; the resolver fetches it fresh.
+        return id === 'S9' ? { id: 'S9', name: 'Fetched Server', icon: 'fetchedicon' } : null;
+      },
+    };
+
+    await updateStreaks(GAME, sessionRepo, streakRepo, resolver, logger);
+
+    expect(fetched).toContain('S9');
+    const top = await streakRepo.getTopServers(GAME, 5);
+    const s9 = top.find(t => t.serverId === 'S9');
+    expect(s9).toBeDefined();
+    expect(s9!.guildName).toBe('Fetched Server');
+    expect(s9!.iconHash).toBe('fetchedicon');
+  });
+
+  it('skips (does not throw, leaves unnamed) a server the bot has left', async () => {
+    // Bot was removed from S8 after the plays happened: the sessions linger in
+    // the window (so a streak row is created) but the guild can no longer be
+    // resolved. The run must complete and the streak must persist; the name
+    // simply stays null (per product decision: ghost rows are OK).
+    await seed('U1', 'S8', dateNDaysAgo(1));
+
+    const resolver: GuildResolver = {
+      async resolve(): Promise<GuildLike | null> {
+        return null; // simulates Unknown Guild / Missing Access
+      },
+    };
+
+    await expect(
+      updateStreaks(GAME, sessionRepo, streakRepo, resolver, logger)
+    ).resolves.toBeUndefined();
+
+    // Streak row still exists with its count; name/icon remain null.
+    const server = await streakRepo.getServerStreak('S8', GAME);
+    expect(server!.currentCount).toBe(1);
+    const top = await streakRepo.getTopServers(GAME, 5);
+    const s8 = top.find(t => t.serverId === 'S8');
+    expect(s8).toBeDefined();
+    expect(s8!.guildName).toBeNull();
+    expect(s8!.iconHash).toBeNull();
   });
 });

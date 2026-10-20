@@ -11,6 +11,65 @@ export interface GuildLike {
 }
 
 /**
+ * Resolves a guild's display metadata by id, authoritatively.
+ *
+ * Returns the guild's {@link GuildLike} shape, or null if it cannot be resolved
+ * (e.g. the bot was removed from that server, or Discord returns Unknown Guild).
+ * Implementations should PREFER the in-memory gateway cache and fall back to a
+ * REST fetch on a miss, so that servers absent from the cache at nightly-run
+ * time (just-restarted bot, partially-hydrated cache) still get named.
+ */
+export interface GuildResolver {
+  resolve(id: string): Promise<GuildLike | null>;
+}
+
+/**
+ * Build a {@link GuildResolver} from a discord.js client.
+ *
+ * `client.guilds.fetch(id)` checks the cache first and performs a REST lookup on
+ * a miss, which is exactly the behavior we want: cheap for cached guilds, and
+ * authoritative for ones the gateway hasn't streamed to us yet. A failed fetch
+ * (bot no longer in the guild -> Unknown Guild / Missing Access) resolves to
+ * null and is skipped by the caller rather than throwing.
+ *
+ * Accepts a structurally-typed client so this module doesn't hard-depend on
+ * discord.js types (and stays trivially testable).
+ */
+export function clientGuildResolver(
+  client: { guilds: { fetch(id: string): Promise<{ id: string; name: string; icon: string | null }> } },
+  logger?: Logger,
+): GuildResolver {
+  return {
+    async resolve(id: string): Promise<GuildLike | null> {
+      try {
+        const g = await client.guilds.fetch(id);
+        return { id: g.id, name: g.name, icon: g.icon };
+      } catch (e) {
+        // Most commonly: the bot was removed from this guild, so it can no
+        // longer be fetched. That's expected for ghost rows -- skip, don't throw.
+        logger?.debug?.(`[streaks] could not resolve guild ${id} (likely bot removed)`, { error: e });
+        return null;
+      }
+    },
+  };
+}
+
+/**
+ * Adapt a fixed collection of guilds (e.g. the gateway cache snapshot, or a
+ * test fixture) into a {@link GuildResolver}. Useful where a REST client isn't
+ * available; resolves only from the provided set and returns null for misses.
+ */
+export function iterableGuildResolver(guilds: Iterable<GuildLike>): GuildResolver {
+  const byId = new Map<string, GuildLike>();
+  for (const g of guilds) byId.set(g.id, g);
+  return {
+    async resolve(id: string): Promise<GuildLike | null> {
+      return byId.get(id) ?? null;
+    },
+  };
+}
+
+/**
  * Advance persisted streaks for a game, gap-tolerantly, from the completed
  * sessions still in the retention window, then reset any scope that lapsed on
  * the just-finished day. MUST be called BEFORE deleteOldSessions(7) in the
@@ -28,6 +87,17 @@ export interface GuildLike {
  * outage replays the missed-but-still-retained days correctly and is a no-op if
  * nothing new happened.
  *
+ * Metadata (guild name + icon) is resolved for EVERY server that has a streak
+ * this run -- not just the ones currently in the gateway cache. The two writers
+ * (advance = counts, upsertServerMeta = name/icon) target the same row and each
+ * only touches its own columns, so they must cover the SAME set of servers for
+ * a row to end up complete. Resolving by streak-server (via `guildResolver`,
+ * which falls back to a REST fetch) guarantees that and also self-heals rows
+ * previously left name-less because their server wasn't cached at run time.
+ *
+ * @param guilds either a {@link GuildResolver} (preferred; enables REST
+ *   fallback) or a plain iterable of guilds (wrapped into a resolver). Passing
+ *   an iterable means misses cannot be back-filled -- use a resolver in prod.
  * @param windowDays how many days of completions to consider (match the purge
  *   window, default 7). The "just-finished day" for lapse detection is derived
  *   from the newest puzzle_date observed, falling back to yesterday.
@@ -36,7 +106,7 @@ export async function updateStreaks(
   gameType: string,
   sessionRepo: GameStateRepository,
   streakRepo: StreakRepository,
-  guilds: Iterable<GuildLike>,
+  guilds: GuildResolver | Iterable<GuildLike>,
   logger: Logger,
   windowDays = 7,
 ): Promise<void> {
@@ -88,14 +158,30 @@ export async function updateStreaks(
     await streakRepo.resetAllLapsed(gameType, latestDate);
 
     // Capture guild display metadata for the public leaderboard.
-    for (const guild of guilds) {
-      if (isSyntheticServer(guild.id)) continue;
-      await streakRepo.upsertServerMeta(guild.id, gameType, guild.name, guild.icon);
+    //
+    // Resolve names/icons for EVERY server that has a streak row this run (the
+    // keys of serverDates), not just whatever is in the gateway cache. Using a
+    // resolver with a REST fallback ensures servers absent from the cache at
+    // run time (restarted bot, partial hydration) still get named -- and
+    // back-fills any rows previously left name-less for the same reason.
+    const resolver: GuildResolver = isGuildResolver(guilds) ? guilds : iterableGuildResolver(guilds);
+    let named = 0;
+    for (const serverId of serverDates.keys()) {
+      if (isSyntheticServer(serverId)) continue;
+      const guild = await resolver.resolve(serverId);
+      if (!guild) continue; // bot removed / unresolvable -> leave as-is, skip
+      await streakRepo.upsertServerMeta(serverId, gameType, guild.name, guild.icon);
+      named++;
     }
 
-    logger.info(`[streaks] updated ${serverDates.size} server(s), ${playerDates.size} player-scope(s) for ${gameType}`);
+    logger.info(`[streaks] updated ${serverDates.size} server(s), ${playerDates.size} player-scope(s), named ${named} for ${gameType}`);
   } catch (e) {
     // Never let streak bookkeeping break the daily post.
     logger.error('[streaks] update failed', { gameType, error: e });
   }
+}
+
+/** Structural check: does this value look like a {@link GuildResolver}? */
+function isGuildResolver(x: GuildResolver | Iterable<GuildLike>): x is GuildResolver {
+  return typeof (x as GuildResolver).resolve === 'function';
 }

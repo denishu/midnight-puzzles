@@ -17,7 +17,7 @@ import { UserRepository } from '../core/storage/UserRepository';
 import { GameStateRepository } from '../core/storage/GameStateRepository';
 import { ConfigRepository } from '../core/storage/ConfigRepository';
 import { StreakRepository } from '../core/storage/StreakRepository';
-import { updateStreaks } from './shared/updateStreaks';
+import { updateStreaks, clientGuildResolver } from './shared/updateStreaks';
 import { makeStreakHandler } from './shared/streakCommand';
 import { MigrationManager } from '../core/storage/migrations/migrate';
 
@@ -96,7 +96,7 @@ export class DuotrigordleBot extends BaseBotApplication {
 
       // Update persisted streaks BEFORE the purge, while the completions window
       // is still present.
-      await updateStreaks('duotrigordle', this.sessionRepo, this.streakRepo, this.client.guilds.cache.values(), this.logger);
+      await updateStreaks('duotrigordle', this.sessionRepo, this.streakRepo, clientGuildResolver(this.client, this.logger), this.logger);
 
       // Clean up old DB sessions and in-memory cache before posting
       await this.sessionRepo.deleteOldSessions(7);
