@@ -26,7 +26,6 @@ import { config } from 'dotenv';
 import { Client, GatewayIntentBits } from 'discord.js';
 import { DatabaseConnectionFactory, DatabaseConfig } from '../core/storage/DatabaseConnection';
 import { StreakRepository, isSyntheticServer } from '../core/storage/StreakRepository';
-import { clientGuildResolver } from '../bot/shared/updateStreaks';
 import { Logger } from '../core/utils/Logger';
 
 config();
@@ -89,17 +88,32 @@ async function main(): Promise<void> {
   });
   log.info(`Logged in as ${client.user?.tag}; cache has ${client.guilds.cache.size} guild(s)`);
 
-  const resolver = clientGuildResolver(client, log);
   let named = 0;
-  let skipped = 0;
+  let removed = 0;   // genuine: bot not in guild (Unknown Guild / Missing Access)
+  let errored = 0;   // other failures (rate limit, network, etc.) -- NOT skipped silently
   for (const id of serverIds) {
-    const guild = await resolver.resolve(id);
-    if (!guild) { skipped++; continue; }
-    await repo.upsertServerMeta(id, game, guild.name, guild.icon);
-    named++;
+    const inCache = client.guilds.cache.has(id);
+    try {
+      // Direct fetch so we can inspect the failure reason, rather than going
+      // through the resolver's catch-all. Same call the resolver uses.
+      const g = await client.guilds.fetch(id);
+      await repo.upsertServerMeta(id, game, g.name, g.icon);
+      named++;
+      log.info(`  named ${id} -> "${g.name}" (${inCache ? 'cache' : 'REST'})`);
+    } catch (e: any) {
+      const code = e?.code ?? e?.status ?? 'unknown';
+      // 10004 = Unknown Guild, 50001 = Missing Access -> bot genuinely not in it.
+      if (code === 10004 || code === 50001) {
+        removed++;
+        log.info(`  skip  ${id} -> bot not in guild (code ${code})`);
+      } else {
+        errored++;
+        log.warn(`  ERROR ${id} -> fetch failed (code ${code}): ${e?.message ?? e}`);
+      }
+    }
   }
 
-  log.info(`[backfill] ${game}: named ${named}, skipped ${skipped} (bot no longer in those servers)`);
+  log.info(`[backfill] ${game}: named ${named}, removed ${removed}, errored ${errored}`);
 
   await client.destroy();
   await DatabaseConnectionFactory.close();
