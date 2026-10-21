@@ -105,6 +105,22 @@ async function main(): Promise<void> {
   }
   const installedIds = new Set(installed.map(g => g.id));
 
+  // The approximate counts Discord shows in the dev portal "Install Count"
+  // panel -- fetched from the SAME field the portal renders, so we can compare
+  // it directly against the enumerated live guild list above.
+  let apiGuildCount: number | null = null;
+  let apiUserInstallCount: number | null = null;
+  try {
+    const app = await client.rest.get('/applications/@me') as {
+      approximate_guild_count?: number;
+      approximate_user_install_count?: number;
+    };
+    apiGuildCount = app.approximate_guild_count ?? null;
+    apiUserInstallCount = app.approximate_user_install_count ?? null;
+  } catch (e) {
+    log.warn('could not read /applications/@me approximate counts');
+  }
+
   // --- Classify -------------------------------------------------------------
   let played = 0, configured = 0, idle = 0;
   for (const g of installed) {
@@ -118,7 +134,9 @@ async function main(): Promise<void> {
   const orphanStreaks = [...streakServers].filter(id => !installedIds.has(id) && id !== 'activity' && id !== 'dm' && id !== '');
 
   log.info(`=== ${game} guild audit ===`);
-  log.info(`installed (bot is a member)   : ${installed.length}`);
+  log.info(`installed (bot is a member)   : ${installed.length}   [enumerated via GET /users/@me/guilds]`);
+  log.info(`approximate_guild_count (API) : ${apiGuildCount ?? 'n/a'}   [same field the dev-portal 'Servers' shows]`);
+  log.info(`approximate_user_install_count: ${apiUserInstallCount ?? 'n/a'}`);
   log.info(`  ...with a server_configs row: ${configured}`);
   log.info(`  ...with a streak (<=7d play): ${played}`);
   log.info(`  ...idle (neither)           : ${idle}`);
