@@ -95,6 +95,16 @@ export function iterableGuildResolver(guilds: Iterable<GuildLike>): GuildResolve
  * which falls back to a REST fetch) guarantees that and also self-heals rows
  * previously left name-less because their server wasn't cached at run time.
  *
+ * Membership gating: a streak (either scope) is advanced ONLY for servers the
+ * bot is actually a member of. A streak is only ever surfaced to users through
+ * embed messages -- the daily recap's "Server streak" line and the /streak
+ * command -- both of which require the bot to be in the guild. Sessions can be
+ * created in guilds WITHOUT the bot via user-installed Activity launches; those
+ * guilds get no embed, no /streak, and no daily prompt, so tracking a streak
+ * for them (and leaking it onto the public leaderboard) is incoherent. We use
+ * the resolver as the membership test: resolve() returns null exactly when the
+ * bot cannot fetch the guild (Unknown Guild / Missing Access = not a member).
+ *
  * @param guilds either a {@link GuildResolver} (preferred; enables REST
  *   fallback) or a plain iterable of guilds (wrapped into a resolver). Passing
  *   an iterable means misses cannot be back-filled -- use a resolver in prod.
@@ -142,13 +152,26 @@ export async function updateStreaks(
       const y = new Date(); y.setUTCDate(y.getUTCDate() - 1); return y.toISOString().split('T')[0]!;
     })();
 
-    // Advance server scopes.
+    // Membership gate: resolve every candidate server ONCE. A server resolves
+    // iff the bot is a member of it (resolver.resolve returns the guild);
+    // otherwise it's a user-install/bot-less guild and we skip it entirely for
+    // BOTH scopes -- no streak there is ever visible to its members.
+    const resolver: GuildResolver = isGuildResolver(guilds) ? guilds : iterableGuildResolver(guilds);
+    const members = new Map<string, GuildLike>(); // serverId -> guild (bot is in it)
+    for (const serverId of serverDates.keys()) {
+      const guild = await resolver.resolve(serverId);
+      if (guild) members.set(serverId, guild);
+    }
+
+    // Advance server scopes -- only for guilds the bot is in.
     for (const [serverId, dates] of serverDates) {
+      if (!members.has(serverId)) continue;
       await streakRepo.advance('server', serverId, gameType, [...dates]);
     }
-    // Advance player scopes.
+    // Advance player scopes -- only in guilds the bot is in.
     for (const [pKey, dates] of playerDates) {
       const { serverId, userId } = playerKeys.get(pKey)!;
+      if (!members.has(serverId)) continue;
       await streakRepo.advance('player', serverId, gameType, [...dates], userId);
     }
 
@@ -157,24 +180,16 @@ export async function updateStreaks(
     // scopes that stopped playing entirely (which wouldn't appear above).
     await streakRepo.resetAllLapsed(gameType, latestDate);
 
-    // Capture guild display metadata for the public leaderboard.
-    //
-    // Resolve names/icons for EVERY server that has a streak row this run (the
-    // keys of serverDates), not just whatever is in the gateway cache. Using a
-    // resolver with a REST fallback ensures servers absent from the cache at
-    // run time (restarted bot, partial hydration) still get named -- and
-    // back-fills any rows previously left name-less for the same reason.
-    const resolver: GuildResolver = isGuildResolver(guilds) ? guilds : iterableGuildResolver(guilds);
+    // Capture guild display metadata for the public leaderboard, reusing the
+    // guilds already resolved above (no second fetch). Only bot-member guilds
+    // are present in `members`, so only they get named/ranked.
     let named = 0;
-    for (const serverId of serverDates.keys()) {
-      if (isSyntheticServer(serverId)) continue;
-      const guild = await resolver.resolve(serverId);
-      if (!guild) continue; // bot removed / unresolvable -> leave as-is, skip
+    for (const [serverId, guild] of members) {
       await streakRepo.upsertServerMeta(serverId, gameType, guild.name, guild.icon);
       named++;
     }
 
-    logger.info(`[streaks] updated ${serverDates.size} server(s), ${playerDates.size} player-scope(s), named ${named} for ${gameType}`);
+    logger.info(`[streaks] updated ${members.size}/${serverDates.size} member-server(s), ${playerDates.size} player-scope(s), named ${named} for ${gameType}`);
   } catch (e) {
     // Never let streak bookkeeping break the daily post.
     logger.error('[streaks] update failed', { gameType, error: e });

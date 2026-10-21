@@ -209,6 +209,26 @@ export class StreakRepository {
   }
 
   /**
+   * Delete ALL streak rows (both scopes, all users) for a server+game. Used to
+   * purge streaks accrued in guilds the bot is NOT a member of -- those are
+   * created only by user-installed Activity launches, surface nothing to the
+   * guild's members (no embed, no /streak, no daily prompt), and must not
+   * appear on the public leaderboard. Returns the number of rows removed.
+   */
+  async deleteServer(serverId: string, gameType: string): Promise<number> {
+    const rows = await this.db.query<any>(
+      `SELECT COUNT(*) AS n FROM streaks WHERE server_id = ? AND game_type = ?`,
+      [serverId, gameType]
+    );
+    const n = Number(rows[0]?.n ?? 0);
+    await this.db.query(
+      `DELETE FROM streaks WHERE server_id = ? AND game_type = ?`,
+      [serverId, gameType]
+    );
+    return n;
+  }
+
+  /**
    * Record a server's display metadata (name + icon hash) on its server-scope
    * row so the public leaderboard can render it. Upserts the server row,
    * creating it with zeroed counts if it does not exist yet. Only updates the

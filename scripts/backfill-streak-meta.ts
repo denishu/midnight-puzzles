@@ -18,6 +18,11 @@
  *   npx ts-node scripts/backfill-streak-meta.ts --game travle
  *   npx ts-node scripts/backfill-streak-meta.ts --game duotrigordle
  *
+ * Add --prune to DELETE all streak rows (both scopes) for guilds the bot is
+ * confirmed not a member of (user-install/bot-less Activity guilds), which
+ * surface no streak to their members and must not appear on the leaderboard:
+ *   npx ts-node scripts/backfill-streak-meta.ts --game semantle --prune
+ *
  * Reads the bot token + DB config from the environment exactly like the bots
  * (so it targets Postgres in production when NODE_ENV=production).
  */
@@ -88,14 +93,18 @@ async function main(): Promise<void> {
   });
   log.info(`Logged in as ${client.user?.tag}; cache has ${client.guilds.cache.size} guild(s)`);
 
+  const prune = process.argv.includes('--prune');
+  if (prune) log.info('--prune enabled: streak rows for bot-less guilds will be DELETED');
+
   let named = 0;
-  let removed = 0;   // genuine: bot not in guild (Unknown Guild / Missing Access)
-  let errored = 0;   // other failures (rate limit, network, etc.) -- NOT skipped silently
+  let notMember = 0; // genuine: bot not in guild (Unknown Guild / Missing Access)
+  let errored = 0;   // other failures (rate limit, network, etc.) -- NOT pruned
+  let pruned = 0;    // rows deleted under --prune
   for (const id of serverIds) {
     const inCache = client.guilds.cache.has(id);
     try {
       // Direct fetch so we can inspect the failure reason, rather than going
-      // through the resolver's catch-all. Same call the resolver uses.
+      // through the resolver's catch-all. Same call the nightly job uses.
       const g = await client.guilds.fetch(id);
       await repo.upsertServerMeta(id, game, g.name, g.icon);
       named++;
@@ -104,16 +113,26 @@ async function main(): Promise<void> {
       const code = e?.code ?? e?.status ?? 'unknown';
       // 10004 = Unknown Guild, 50001 = Missing Access -> bot genuinely not in it.
       if (code === 10004 || code === 50001) {
-        removed++;
-        log.info(`  skip  ${id} -> bot not in guild (code ${code})`);
+        notMember++;
+        if (prune) {
+          const n = await repo.deleteServer(id, game);
+          pruned += n;
+          log.info(`  prune ${id} -> not a member; deleted ${n} row(s)`);
+        } else {
+          log.info(`  skip  ${id} -> bot not in guild (code ${code})`);
+        }
       } else {
+        // Ambiguous failure: do NOT prune (could be a transient rate-limit).
         errored++;
         log.warn(`  ERROR ${id} -> fetch failed (code ${code}): ${e?.message ?? e}`);
       }
     }
   }
 
-  log.info(`[backfill] ${game}: named ${named}, removed ${removed}, errored ${errored}`);
+  log.info(
+    `[backfill] ${game}: named ${named}, not-member ${notMember}, errored ${errored}` +
+    (prune ? `, pruned ${pruned} row(s)` : '')
+  );
 
   await client.destroy();
   await DatabaseConnectionFactory.close();

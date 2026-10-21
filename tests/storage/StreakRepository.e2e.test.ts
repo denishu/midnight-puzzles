@@ -260,16 +260,17 @@ describe('updateStreaks nightly helper (gap-tolerant, over real sessions)', () =
     expect(s9!.iconHash).toBe('fetchedicon');
   });
 
-  it('skips (does not throw, leaves unnamed) a server the bot has left', async () => {
-    // Bot was removed from S8 after the plays happened: the sessions linger in
-    // the window (so a streak row is created) but the guild can no longer be
-    // resolved. The run must complete and the streak must persist; the name
-    // simply stays null (per product decision: ghost rows are OK).
+  it('does NOT track a streak (either scope) for a guild the bot is not in', async () => {
+    // S8 has completed sessions (e.g. via a user-installed Activity launch in a
+    // guild without the bot). Since a streak is only ever visible through embed
+    // messages that require the bot to be present, no streak should be tracked
+    // for S8 at all -- neither server nor player scope -- and it must never
+    // reach the public leaderboard.
     await seed('U1', 'S8', dateNDaysAgo(1));
 
     const resolver: GuildResolver = {
       async resolve(): Promise<GuildLike | null> {
-        return null; // simulates Unknown Guild / Missing Access
+        return null; // simulates Unknown Guild / Missing Access -> bot not a member
       },
     };
 
@@ -277,13 +278,40 @@ describe('updateStreaks nightly helper (gap-tolerant, over real sessions)', () =
       updateStreaks(GAME, sessionRepo, streakRepo, resolver, logger)
     ).resolves.toBeUndefined();
 
-    // Streak row still exists with its count; name/icon remain null.
-    const server = await streakRepo.getServerStreak('S8', GAME);
-    expect(server!.currentCount).toBe(1);
+    // No row for either scope, and nothing on the board.
+    expect(await streakRepo.getServerStreak('S8', GAME)).toBeNull();
+    expect(await streakRepo.getPlayerStreak('U1', 'S8', GAME)).toBeNull();
     const top = await streakRepo.getTopServers(GAME, 5);
-    const s8 = top.find(t => t.serverId === 'S8');
-    expect(s8).toBeDefined();
-    expect(s8!.guildName).toBeNull();
-    expect(s8!.iconHash).toBeNull();
+    expect(top.find(t => t.serverId === 'S8')).toBeUndefined();
+  });
+
+  it('tracks member guilds but not bot-less ones in the same run (mixed)', async () => {
+    // S1 (member, in the guilds fixture) and SX (bot-less) both have sessions.
+    // Only S1 should be tracked.
+    await seed('U1', 'S1', dateNDaysAgo(1));
+    await seed('U2', 'SX', dateNDaysAgo(1));
+
+    const resolver: GuildResolver = {
+      async resolve(id: string): Promise<GuildLike | null> {
+        return id === 'S1' ? { id: 'S1', name: 'Alpha Server', icon: 'iconhash' } : null;
+      },
+    };
+
+    await updateStreaks(GAME, sessionRepo, streakRepo, resolver, logger);
+
+    expect((await streakRepo.getServerStreak('S1', GAME))!.currentCount).toBe(1);
+    expect(await streakRepo.getServerStreak('SX', GAME)).toBeNull();
+    expect(await streakRepo.getPlayerStreak('U2', 'SX', GAME)).toBeNull();
+  });
+
+  it('deleteServer removes all rows (both scopes) for a server+game', async () => {
+    await streakRepo.advance('server', 'SZ', GAME, ['2026-10-01']);
+    await streakRepo.advance('player', 'SZ', GAME, ['2026-10-01'], 'U1');
+    await streakRepo.upsertServerMeta('SZ', GAME, 'Zed', 'zicon');
+
+    const removed = await streakRepo.deleteServer('SZ', GAME);
+    expect(removed).toBeGreaterThanOrEqual(2);
+    expect(await streakRepo.getServerStreak('SZ', GAME)).toBeNull();
+    expect(await streakRepo.getPlayerStreak('U1', 'SZ', GAME)).toBeNull();
   });
 });
