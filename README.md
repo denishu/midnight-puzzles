@@ -63,7 +63,8 @@ midnight-puzzles/
 │   ├── dictionaries/        # GloVe vectors, word lists, proper noun blacklist
 │   └── geography/           # Country adjacency graph (196 countries)
 ├── tests/                   # Jest unit tests (30 Duotrigordle + Semantle + Travle)
-├── scripts/                 # Utility scripts (deploy, check puzzles, word list tools)
+├── scripts/                 # Utility & ops scripts — see scripts/README.md
+│                            #   (streak backfill/prune, guild audit, diagnostics)
 └── assets/                  # Logos and screenshots
 ```
 
@@ -122,7 +123,13 @@ See `.env.example` for the full list. Each game needs:
 
 ## Database
 
-SQLite for development (auto-created `.db` files), PostgreSQL for production. One database per game containing all servers and users. The bot and web server for the same game share the same database.
+SQLite for development (auto-created per-game `.db` files), PostgreSQL for
+production via `DATABASE_URL`. Observed in production: all three games' rows
+(servers, users, sessions, streaks) live in a single shared database — a lone
+`check-streaks.js` run returns semantle, travle, and duotrigordle rows together,
+and the per-game `*-bot.db` filenames are dev-only sqlite defaults that don't
+exist on the prod box. The bot and web server for the same game always share the
+same database.
 
 ## Daily Flow
 
