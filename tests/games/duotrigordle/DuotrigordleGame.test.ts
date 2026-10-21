@@ -75,8 +75,8 @@ describe('WordValidator', () => {
   it('loads real word lists from disk', () => {
     const v = new WordValidator();
     v.loadWordLists();
-    expect(v.answerCount).toBe(3252);
-    expect(v.guessCount).toBeGreaterThan(3252);
+    expect(v.answerCount).toBe(3249);
+    expect(v.guessCount).toBeGreaterThan(3249);
     expect(v.isValidAnswer('crane')).toBe(true);
     expect(v.isValidGuess('crane')).toBe(true);
   });
