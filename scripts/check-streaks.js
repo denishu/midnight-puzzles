@@ -3,10 +3,12 @@
 //
 // Usage:
 //   node scripts/check-streaks.js [dbPath]
-// Examples:
-//   node scripts/check-streaks.js                 # defaults to semantle-bot.db
-//   node scripts/check-streaks.js travle-bot.db
-//   node scripts/check-streaks.js duotrigordle-bot.db
+//
+// DB NOTE: in production all three bots share ONE database (via DATABASE_URL),
+// so a single run shows semantle + travle + duotrigordle rows together. The
+// optional [dbPath] arg only matters for local sqlite-per-game setups; on the
+// prod box just run `node scripts/check-streaks.js` (the per-game *-bot.db
+// files do not exist there -- passing one yields "no such table: streaks").
 //
 // Does not modify the database in any way.
 
