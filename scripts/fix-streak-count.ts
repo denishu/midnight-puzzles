@@ -77,6 +77,24 @@ async function main(): Promise<void> {
   console.log(`server-scope UPDATE changed ${serverChanges} row(s)`);
 
   if (user) {
+    // Diagnose exactly which predicate excludes the row: dump the raw scope
+    // value (quoted + length) and progressive match counts.
+    const raw = await all(
+      db,
+      `SELECT scope, '>' || scope || '<' AS scope_q, length(scope) AS scope_len,
+              user_id, '>' || user_id || '<' AS uid_q, length(user_id) AS uid_len
+       FROM streaks WHERE server_id = ? AND game_type = ? AND current_count IS NOT NULL`,
+      [server, game]
+    );
+    console.log('all rows for this server+game (raw scope/user):');
+    console.table(raw);
+
+    const c1 = await all(db, `SELECT COUNT(*) n FROM streaks WHERE server_id=? AND game_type=?`, [server, game]);
+    const c2 = await all(db, `SELECT COUNT(*) n FROM streaks WHERE server_id=? AND game_type=? AND user_id=?`, [server, game, user]);
+    const c3 = await all(db, `SELECT COUNT(*) n FROM streaks WHERE server_id=? AND game_type=? AND user_id=? AND scope=?`, [server, game, user, 'player']);
+    const c4 = await all(db, `SELECT COUNT(*) n FROM streaks WHERE server_id=? AND game_type=? AND user_id=? AND scope LIKE ?`, [server, game, user, '%player%']);
+    console.log(`match server+game: ${c1[0].n} | +user_id: ${c2[0].n} | +scope='player': ${c3[0].n} | +scope LIKE %player%: ${c4[0].n}`);
+
     const playerChanges = await run(
       db,
       `UPDATE streaks SET current_count = ?, max_count = ?, current_last_date = ?, max_date = ?, updated_at = CURRENT_TIMESTAMP
