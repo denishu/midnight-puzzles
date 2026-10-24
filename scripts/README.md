@@ -59,6 +59,35 @@ after a prune).
 npx ts-node scripts/audit-guilds.ts --game travle
 ```
 
+### `diagnose-streak.ts` (read-only)
+Prints a single server+game's streak rows (both scopes) next to the DISTINCT
+completed puzzle-dates from `game_sessions`, each annotated with its derived
+puzzle NUMBER (UTC date → number, epoch 2026-10-01 = #1). Lets you see at a
+glance whether `current_count` matches the actual run of consecutive completed
+days, and which day is phantom/missing if not. Also prints today's number.
+```
+npx ts-node scripts/diagnose-streak.ts --game duotrigordle --server 1505076028597338142
+```
+
+### `fix-streak-count.ts` (writes — one-off correction)
+Manually sets `current_count`/`max_count`/`current_last_date`/`max_date` on the
+server-scope row and (with `--user`) a player's row for a given server+game.
+Used to repair values inflated by the old loss-counting bug. Writes via sqlite3
+`run()` **by rowid** (a predicate-based UPDATE was observed to report 0 changes
+despite a provably-matching row — see note below). sqlite-only.
+```
+npx ts-node scripts/fix-streak-count.ts --game duotrigordle \
+  --server 1505076028597338142 --current 3 --max 3 \
+  --last-date 2026-10-23 --user 250395918774435840
+```
+
+## Known loose ends (for a future session)
+- `DatabaseConnection.query` routes ALL statements (incl. writes) through
+  sqlite's `all()`, not `run()`. A predicate-based UPDATE in a one-off script
+  reported 0 changes even though an identical SELECT matched the row; updating
+  by `rowid` worked. The app's normal write paths appear to work in practice,
+  but it's worth verifying no production write can silently no-op.
+
 ## Related non-ops scripts
 - `seed-streaks.ts` — seeds sample streak data for manual leaderboard testing
   (does not target prod unless you pass a real `--server`).
