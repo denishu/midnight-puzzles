@@ -314,4 +314,45 @@ describe('updateStreaks nightly helper (gap-tolerant, over real sessions)', () =
     expect(await streakRepo.getServerStreak('SZ', GAME)).toBeNull();
     expect(await streakRepo.getPlayerStreak('U1', 'SZ', GAME)).toBeNull();
   });
+
+  it('does NOT count a completed-but-LOST game toward the streak', async () => {
+    // U1 lost day -3, then won days -2 and -1. The streak should be 2 (the two
+    // wins), NOT 3 -- a loss must break/not-extend the run.
+    await seed('U1', 'S1', dateNDaysAgo(3), false); // LOSS
+    await seed('U1', 'S1', dateNDaysAgo(2), true);
+    await seed('U1', 'S1', dateNDaysAgo(1), true);
+
+    await updateStreaks(GAME, sessionRepo, streakRepo, guilds, logger);
+
+    const player = await streakRepo.getPlayerStreak('U1', 'S1', GAME);
+    expect(player!.currentCount).toBe(2);
+    expect(player!.maxCount).toBe(2);
+  });
+
+  it('a loss in the middle resets the streak (counts only the post-loss win)', async () => {
+    await seed('U1', 'S1', dateNDaysAgo(3), true);  // win
+    await seed('U1', 'S1', dateNDaysAgo(2), false); // LOSS breaks it
+    await seed('U1', 'S1', dateNDaysAgo(1), true);  // win -> restart at 1
+
+    await updateStreaks(GAME, sessionRepo, streakRepo, guilds, logger);
+
+    const player = await streakRepo.getPlayerStreak('U1', 'S1', GAME);
+    expect(player!.currentCount).toBe(1);
+    expect(player!.maxCount).toBe(1);
+  });
+
+  it('still counts a completion that has no explicit isWin (semantle-style)', async () => {
+    // Semantle completions may not set result.isWin to true; isSessionWin must
+    // treat "not an explicit loss" as a win so those still count.
+    await userRepo.upsertUser('U1', 'user_U1');
+    const s1 = await sessionRepo.createSession({ userId: 'U1', serverId: 'S1', gameType: GAME, puzzleDate: dateNDaysAgo(2), maxAttempts: 10, gameData: {} });
+    await sessionRepo.completeSession(s1.id, { guessCount: 5 }); // no isWin field
+    const s2 = await sessionRepo.createSession({ userId: 'U1', serverId: 'S1', gameType: GAME, puzzleDate: dateNDaysAgo(1), maxAttempts: 10, gameData: {} });
+    await sessionRepo.completeSession(s2.id, { guessCount: 4 }); // no isWin field
+
+    await updateStreaks(GAME, sessionRepo, streakRepo, guilds, logger);
+
+    const player = await streakRepo.getPlayerStreak('U1', 'S1', GAME);
+    expect(player!.currentCount).toBe(2);
+  });
 });

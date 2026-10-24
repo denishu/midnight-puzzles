@@ -17,6 +17,7 @@
 export interface CompletableSession {
   isComplete?: boolean;
   gameData?: Record<string, any> | null;
+  result?: Record<string, any> | null;
 }
 
 /**
@@ -42,6 +43,43 @@ export function isSessionComplete(session: CompletableSession): boolean {
   }
 
   return false;
+}
+
+/**
+ * Whether a completed session counts as a WIN for streak purposes.
+ *
+ * Streaks are consecutive-day *wins*, not merely consecutive attempts, so a
+ * completed-but-lost game (travle/duotrigordle running out of guesses) must NOT
+ * extend a streak. The win signal lives in `result.isWin` (set by
+ * completeSession) and, as a fallback, `game_data.isWin`.
+ *
+ * Semantics are the INVERSE of an explicit loss -- a session wins unless it is
+ * explicitly marked `isWin === false` -- deliberately matching the daily
+ * recap's own check (`s.result?.isWin !== false`). This is required for
+ * per-game correctness:
+ *   - travle / duotrigordle set `isWin: false` on a loss  -> excluded.
+ *   - semantle has no fail-state; completions may not set `isWin` to `true`
+ *     at all (undefined) -> still counted, exactly as the recap treats them.
+ *
+ * Callers should gate on {@link isSessionComplete} first; this only decides
+ * win-vs-loss for sessions that are already complete.
+ */
+export function isSessionWin(session: CompletableSession): boolean {
+  const resultWin = session.result && typeof session.result === 'object'
+    ? (session.result as Record<string, unknown>).isWin
+    : undefined;
+  if (resultWin === false || resultWin === 0 || resultWin === '0') return false;
+  if (resultWin === true || resultWin === 1 || resultWin === '1') return true;
+
+  // Fall back to the game_data marker when result didn't carry isWin.
+  const data = session.gameData;
+  if (data && typeof data === 'object') {
+    const marker = (data as Record<string, unknown>).isWin;
+    if (marker === false || marker === 0 || marker === '0') return false;
+  }
+
+  // No explicit loss signal anywhere -> treat as a win (matches recap).
+  return true;
 }
 
 /**

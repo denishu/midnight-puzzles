@@ -1,6 +1,6 @@
 import { GameStateRepository } from '../../core/storage/GameStateRepository';
 import { StreakRepository, isSyntheticServer, isSyntheticUser } from '../../core/storage/StreakRepository';
-import { isSessionComplete } from '../../core/storage/completion';
+import { isSessionComplete, isSessionWin } from '../../core/storage/completion';
 import { Logger } from '../../core/utils/Logger';
 
 /** Minimal guild shape we need (matches discord.js Guild). */
@@ -131,6 +131,7 @@ export async function updateStreaks(
 
     for (const s of sessions) {
       if (!isSessionComplete(s)) continue;
+      if (!isSessionWin(s)) continue; // losses must not extend a streak
       if (isSyntheticServer(s.serverId)) continue;
       const date = s.puzzleDate.toISOString().split('T')[0]!;
 
