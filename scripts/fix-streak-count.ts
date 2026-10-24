@@ -93,12 +93,17 @@ async function main(): Promise<void> {
     const c2 = await all(db, `SELECT COUNT(*) n FROM streaks WHERE server_id=? AND game_type=? AND user_id=?`, [server, game, user]);
     const c3 = await all(db, `SELECT COUNT(*) n FROM streaks WHERE server_id=? AND game_type=? AND user_id=? AND scope=?`, [server, game, user, 'player']);
     const c4 = await all(db, `SELECT COUNT(*) n FROM streaks WHERE server_id=? AND game_type=? AND user_id=? AND scope LIKE ?`, [server, game, user, '%player%']);
-    console.log(`match server+game: ${c1[0].n} | +user_id: ${c2[0].n} | +scope='player': ${c3[0].n} | +scope LIKE %player%: ${c4[0].n}`);
+    const c5 = await all(db, `SELECT COUNT(*) n FROM streaks WHERE server_id=? AND game_type=? AND CAST(user_id AS TEXT)=? AND scope='player'`, [server, game, user]);
+    const c6 = await all(db, `SELECT COUNT(*) n, typeof(user_id) t FROM streaks WHERE scope='player' AND server_id=? AND game_type=?`, [server, game]);
+    console.log(`match server+game: ${c1[0].n} | +user_id: ${c2[0].n} | +scope='player': ${c3[0].n} | LIKE %player%: ${c4[0].n} | CAST user_id TEXT: ${c5[0].n}`);
+    console.log(`stored user_id typeof: ${c6[0]?.t}`);
 
+    // Type-agnostic UPDATE: CAST user_id to TEXT so a numerically-stored
+    // snowflake (> 2^53, unsafe as a JS/number) still matches a string param.
     const playerChanges = await run(
       db,
       `UPDATE streaks SET current_count = ?, max_count = ?, current_last_date = ?, max_date = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE scope = 'player' AND server_id = ? AND user_id = ? AND game_type = ?`,
+       WHERE scope = 'player' AND server_id = ? AND CAST(user_id AS TEXT) = ? AND game_type = ?`,
       [cur, mx, lastDate, lastDate, server, user]
     );
     console.log(`player-scope UPDATE changed ${playerChanges} row(s)`);
