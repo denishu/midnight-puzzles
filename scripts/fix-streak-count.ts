@@ -1,20 +1,20 @@
 #!/usr/bin/env npx ts-node
 /**
- * One-off manual correction for a streak row's counts, e.g. to repair values
- * inflated by the old "losses counted toward streaks" bug (fixed in
- * updateStreaks). Sets current_count / max_count / current_last_date /
- * max_date on BOTH the server-scope row and (optionally) a specific player's
- * row for a given server+game. Touches ONLY the rows you name.
+ * One-off manual correction for streak counts (repairs values inflated by the
+ * old "losses counted toward streaks" bug). Updates BOTH the server-scope row
+ * and (with --user) a player's row for a given server+game.
  *
- * IMPORTANT: writes go through sqlite3 `run()` directly (not the app's shared
- * DatabaseConnection.query, which routes everything through `all()` and does
- * not reliably persist/report UPDATEs). This script is sqlite-only -- it reads
- * the db file path from DATABASE_URL (defaulting to <game>-bot.db).
+ * Writes by rowid: we first SELECT the target rows' SQLite rowid, then UPDATE
+ * `WHERE rowid = ?`. This sidesteps a baffling case where an UPDATE whose
+ * WHERE clause provably matched (an identical SELECT returned the row) still
+ * reported 0 changes -- matching the physical rowid is unambiguous.
  *
- * Usage (from project root):
- *   npx ts-node scripts/fix-streak-count.ts \
- *     --game duotrigordle --server 1505076028597338142 \
- *     --current 3 --max 3 --last-date 2026-10-23 [--user <discordId>]
+ * sqlite-only; reads the db path from DATABASE_URL (default <game>-bot.db).
+ *
+ * Usage:
+ *   npx ts-node scripts/fix-streak-count.ts --game duotrigordle \
+ *     --server 1505076028597338142 --current 3 --max 3 \
+ *     --last-date 2026-10-23 [--user <discordId>]
  */
 
 import { config } from 'dotenv';
@@ -61,52 +61,32 @@ async function main(): Promise<void> {
   const db = new sqlite3.Database(dbPath);
 
   const SELECT =
-    `SELECT scope, user_id, current_count, current_last_date, max_count, max_date
+    `SELECT rowid, scope, user_id, current_count, current_last_date, max_count, max_date
      FROM streaks WHERE game_type = ? AND server_id = ?`;
 
   console.log('db:', dbPath);
   console.log('before:');
   console.table(await all(db, SELECT, [game, server]));
 
-  const serverChanges = await run(
-    db,
-    `UPDATE streaks SET current_count = ?, max_count = ?, current_last_date = ?, max_date = ?, updated_at = CURRENT_TIMESTAMP
-     WHERE scope = 'server' AND server_id = ? AND user_id = '' AND game_type = ?`,
-    [cur, mx, lastDate, lastDate, server, game]
-  );
-  console.log(`server-scope UPDATE changed ${serverChanges} row(s)`);
-
+  // Collect the rowids to fix: the server row, and (optionally) the player row.
+  const rows = await all(db, SELECT, [game, server]);
+  const targets: { rowid: number; label: string }[] = [];
+  const serverRow = rows.find((r) => r.scope === 'server' && (r.user_id === '' || r.user_id == null));
+  if (serverRow) targets.push({ rowid: serverRow.rowid, label: 'server' });
   if (user) {
-    // Diagnose exactly which predicate excludes the row: dump the raw scope
-    // value (quoted + length) and progressive match counts.
-    const raw = await all(
-      db,
-      `SELECT scope, '>' || scope || '<' AS scope_q, length(scope) AS scope_len,
-              user_id, '>' || user_id || '<' AS uid_q, length(user_id) AS uid_len
-       FROM streaks WHERE server_id = ? AND game_type = ? AND current_count IS NOT NULL`,
-      [server, game]
-    );
-    console.log('all rows for this server+game (raw scope/user):');
-    console.table(raw);
+    const playerRow = rows.find((r) => r.scope === 'player' && String(r.user_id) === user);
+    if (playerRow) targets.push({ rowid: playerRow.rowid, label: `player ${user}` });
+    else console.log(`WARNING: no player row found for user ${user}`);
+  }
 
-    const c1 = await all(db, `SELECT COUNT(*) n FROM streaks WHERE server_id=? AND game_type=?`, [server, game]);
-    const c2 = await all(db, `SELECT COUNT(*) n FROM streaks WHERE server_id=? AND game_type=? AND user_id=?`, [server, game, user]);
-    const c3 = await all(db, `SELECT COUNT(*) n FROM streaks WHERE server_id=? AND game_type=? AND user_id=? AND scope=?`, [server, game, user, 'player']);
-    const c4 = await all(db, `SELECT COUNT(*) n FROM streaks WHERE server_id=? AND game_type=? AND user_id=? AND scope LIKE ?`, [server, game, user, '%player%']);
-    const c5 = await all(db, `SELECT COUNT(*) n FROM streaks WHERE server_id=? AND game_type=? AND CAST(user_id AS TEXT)=? AND scope='player'`, [server, game, user]);
-    const c6 = await all(db, `SELECT COUNT(*) n, typeof(user_id) t FROM streaks WHERE scope='player' AND server_id=? AND game_type=?`, [server, game]);
-    console.log(`match server+game: ${c1[0].n} | +user_id: ${c2[0].n} | +scope='player': ${c3[0].n} | LIKE %player%: ${c4[0].n} | CAST user_id TEXT: ${c5[0].n}`);
-    console.log(`stored user_id typeof: ${c6[0]?.t}`);
-
-    // Type-agnostic UPDATE: CAST user_id to TEXT so a numerically-stored
-    // snowflake (> 2^53, unsafe as a JS/number) still matches a string param.
-    const playerChanges = await run(
+  for (const t of targets) {
+    const changed = await run(
       db,
       `UPDATE streaks SET current_count = ?, max_count = ?, current_last_date = ?, max_date = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE scope = 'player' AND server_id = ? AND CAST(user_id AS TEXT) = ? AND game_type = ?`,
-      [cur, mx, lastDate, lastDate, server, user]
+       WHERE rowid = ?`,
+      [cur, mx, lastDate, lastDate, t.rowid]
     );
-    console.log(`player-scope UPDATE changed ${playerChanges} row(s)`);
+    console.log(`${t.label} (rowid ${t.rowid}) UPDATE changed ${changed} row(s)`);
   }
 
   console.log('after:');
