@@ -6,19 +6,19 @@
  * max_date on BOTH the server-scope row and (optionally) a specific player's
  * row for a given server+game. Touches ONLY the rows you name.
  *
+ * IMPORTANT: writes go through sqlite3 `run()` directly (not the app's shared
+ * DatabaseConnection.query, which routes everything through `all()` and does
+ * not reliably persist/report UPDATEs). This script is sqlite-only -- it reads
+ * the db file path from DATABASE_URL (defaulting to <game>-bot.db).
+ *
  * Usage (from project root):
  *   npx ts-node scripts/fix-streak-count.ts \
  *     --game duotrigordle --server 1505076028597338142 \
  *     --current 3 --max 3 --last-date 2026-10-23 [--user <discordId>]
- *
- * --last-date is used for BOTH current_last_date and max_date (the day the
- * corrected run ends). --user also corrects that player's row to the same
- * values. Reads the DB exactly like the bots (DATABASE_URL / NODE_ENV).
  */
 
 import { config } from 'dotenv';
-import { DatabaseConnectionFactory, DatabaseConfig } from '../core/storage/DatabaseConnection';
-import { Logger } from '../core/utils/Logger';
+import sqlite3 from 'sqlite3';
 
 config();
 
@@ -27,8 +27,22 @@ function arg(flag: string): string | undefined {
   return i >= 0 && i + 1 < process.argv.length ? process.argv[i + 1] : undefined;
 }
 
+function run(db: sqlite3.Database, sql: string, params: any[]): Promise<number> {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function (this: sqlite3.RunResult, err: Error | null) {
+      if (err) return reject(err);
+      resolve(this.changes);
+    });
+  });
+}
+
+function all(db: sqlite3.Database, sql: string, params: any[]): Promise<any[]> {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => (err ? reject(err) : resolve(rows as any[])));
+  });
+}
+
 async function main(): Promise<void> {
-  const log = new Logger('fix-streak-count');
   const game = arg('--game');
   const server = arg('--server');
   const current = arg('--current');
@@ -43,60 +57,39 @@ async function main(): Promise<void> {
   const mx = parseInt(max, 10);
   if (Number.isNaN(cur) || Number.isNaN(mx)) throw new Error('--current and --max must be integers');
 
-  const dbConfig: DatabaseConfig = {
-    type: (process.env.NODE_ENV === 'production' ? 'postgresql' : 'sqlite') as 'sqlite' | 'postgresql',
-    database: process.env.DATABASE_URL || `${game}-bot.db`,
-    ...(process.env.DB_HOST && { host: process.env.DB_HOST }),
-    ...(process.env.DB_PORT && { port: parseInt(process.env.DB_PORT) }),
-    ...(process.env.DB_USER && { username: process.env.DB_USER }),
-    ...(process.env.DB_PASSWORD && { password: process.env.DB_PASSWORD }),
-  };
-  const db = await DatabaseConnectionFactory.create(dbConfig);
+  const dbPath = process.env.DATABASE_URL || `${game}-bot.db`;
+  const db = new sqlite3.Database(dbPath);
 
-  async function show(label: string): Promise<void> {
-    const rows = await db.query<any>(
-      `SELECT scope, user_id, current_count, current_last_date, max_count, max_date
-       FROM streaks WHERE game_type = ? AND server_id = ?`,
-      [game, server]
-    );
-    log.info(label);
-    // eslint-disable-next-line no-console
-    console.table(rows);
-  }
+  const SELECT =
+    `SELECT scope, user_id, current_count, current_last_date, max_count, max_date
+     FROM streaks WHERE game_type = ? AND server_id = ?`;
 
-  await show('before:');
+  console.log('db:', dbPath);
+  console.log('before:');
+  console.table(await all(db, SELECT, [game, server]));
 
-  // Server scope (user_id = '').
-  await db.query(
+  const serverChanges = await run(
+    db,
     `UPDATE streaks SET current_count = ?, max_count = ?, current_last_date = ?, max_date = ?, updated_at = CURRENT_TIMESTAMP
      WHERE scope = 'server' AND server_id = ? AND user_id = '' AND game_type = ?`,
     [cur, mx, lastDate, lastDate, server, game]
   );
-  log.info(`server-scope row set to current=${cur}, max=${mx}, last=${lastDate}`);
+  console.log(`server-scope UPDATE changed ${serverChanges} row(s)`);
 
   if (user) {
-    // Diagnose match before updating: list player rows and compare ids exactly.
-    const playerRows = await db.query<any>(
-      `SELECT user_id, length(user_id) AS len FROM streaks
-       WHERE scope = 'player' AND server_id = ? AND game_type = ?`,
-      [server, game]
-    );
-    log.info(`player rows for this server+game: ${playerRows.length}`);
-    for (const r of playerRows) {
-      log.info(`  stored user_id="${r.user_id}" (len ${r.len}) vs passed="${user}" (len ${user.length}) -> ${r.user_id === user ? 'MATCH' : 'NO MATCH'}`);
-    }
-
-    const res: any = await db.query(
+    const playerChanges = await run(
+      db,
       `UPDATE streaks SET current_count = ?, max_count = ?, current_last_date = ?, max_date = ?, updated_at = CURRENT_TIMESTAMP
        WHERE scope = 'player' AND server_id = ? AND user_id = ? AND game_type = ?`,
       [cur, mx, lastDate, lastDate, server, user]
     );
-    const changes = res?.changes ?? res?.rowCount ?? (Array.isArray(res) ? res.length : 'unknown');
-    log.info(`player-scope UPDATE affected rows: ${changes}`);
+    console.log(`player-scope UPDATE changed ${playerChanges} row(s)`);
   }
 
-  await show('after:');
-  await DatabaseConnectionFactory.close();
+  console.log('after:');
+  console.table(await all(db, SELECT, [game, server]));
+
+  await new Promise<void>((resolve) => db.close(() => resolve()));
 }
 
 main().catch((e) => {
