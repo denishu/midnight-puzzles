@@ -75,12 +75,24 @@ async function main(): Promise<void> {
   log.info(`server-scope row set to current=${cur}, max=${mx}, last=${lastDate}`);
 
   if (user) {
-    await db.query(
+    // Diagnose match before updating: list player rows and compare ids exactly.
+    const playerRows = await db.query<any>(
+      `SELECT user_id, length(user_id) AS len FROM streaks
+       WHERE scope = 'player' AND server_id = ? AND game_type = ?`,
+      [server, game]
+    );
+    log.info(`player rows for this server+game: ${playerRows.length}`);
+    for (const r of playerRows) {
+      log.info(`  stored user_id="${r.user_id}" (len ${r.len}) vs passed="${user}" (len ${user.length}) -> ${r.user_id === user ? 'MATCH' : 'NO MATCH'}`);
+    }
+
+    const res: any = await db.query(
       `UPDATE streaks SET current_count = ?, max_count = ?, current_last_date = ?, max_date = ?, updated_at = CURRENT_TIMESTAMP
        WHERE scope = 'player' AND server_id = ? AND user_id = ? AND game_type = ?`,
       [cur, mx, lastDate, lastDate, server, user]
     );
-    log.info(`player-scope row for ${user} set to current=${cur}, max=${mx}, last=${lastDate}`);
+    const changes = res?.changes ?? res?.rowCount ?? (Array.isArray(res) ? res.length : 'unknown');
+    log.info(`player-scope UPDATE affected rows: ${changes}`);
   }
 
   await show('after:');
