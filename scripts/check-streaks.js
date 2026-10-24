@@ -19,7 +19,7 @@ const db = new sqlite3.Database(dbPath);
 
 const sql =
   'SELECT scope, server_id, game_type, current_count, max_count, ' +
-  'guild_name, icon_hash FROM streaks';
+  'current_last_date, max_date, guild_name, icon_hash FROM streaks';
 
 db.all(sql, function (err, rows) {
   if (err) {
@@ -43,9 +43,10 @@ db.all(sql, function (err, rows) {
       server_id: r.server_id,
       game: r.game_type,
       current: r.current_count,
+      lastDate: r.current_last_date == null ? '(null)' : r.current_last_date,
       max: r.max_count,
+      maxDate: r.max_date == null ? '(null)' : r.max_date,
       name: r.guild_name == null ? '(null)' : r.guild_name,
-      icon: r.icon_hash == null ? '(null)' : r.icon_hash,
     };
   }));
 
