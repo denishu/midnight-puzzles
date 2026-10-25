@@ -42,6 +42,9 @@ import { BaseBotApplication } from './shared/BaseBotApplication';
 import { ConfigRepository } from '../core/storage/ConfigRepository';
 import { GameStateRepository } from '../core/storage/GameStateRepository';
 import { UserRepository } from '../core/storage/UserRepository';
+import { StreakRepository } from '../core/storage/StreakRepository';
+import { updateStreaks, clientGuildResolver } from './shared/updateStreaks';
+import { makeStreakHandler } from './shared/streakCommand';
 import { DatabaseConnectionFactory } from '../core/storage/DatabaseConnection';
 import { MigrationManager } from '../core/storage/migrations/migrate';
 import { EmbedBuilder } from '../core/discord/EmbedBuilder';
@@ -54,6 +57,7 @@ export class NewGameBot extends BaseBotApplication {
   private configRepo!: ConfigRepository;
   private sessionRepo!: GameStateRepository;
   private userRepo!: UserRepository;
+  private streakRepo!: StreakRepository;
 
   constructor() {
     super({
@@ -73,6 +77,7 @@ export class NewGameBot extends BaseBotApplication {
     this.configRepo = new ConfigRepository(db);
     this.sessionRepo = new GameStateRepository(db);
     this.userRepo = new UserRepository(db);
+    this.streakRepo = new StreakRepository(db);
 
     // Initialize your game here
 
@@ -81,19 +86,28 @@ export class NewGameBot extends BaseBotApplication {
   }
 
   private scheduleDailyMessage(): void {
-    cron.schedule('0 0 * * *', () => this.postDailyMessage(), { timezone: 'UTC' });
+    // Stagger AFTER the existing games so recaps land in order in shared
+    // servers (semantle 00:01, travle 00:02, duotri 00:03 UTC -> pick the next).
+    cron.schedule('4 0 * * *', () => this.postDailyMessage(), { timezone: 'UTC' });
   }
 
   private async postDailyMessage(): Promise<void> {
     // Same pattern as travle/semantle:
     // 1. Query yesterday's completed sessions
-    // 2. Purge old sessions + clear cache
+    // 2. updateStreaks BEFORE the purge, membership-gated via the REST resolver:
+    //      await updateStreaks('newgame', this.sessionRepo, this.streakRepo,
+    //        clientGuildResolver(this.client, this.logger), this.logger);
+    //    (This advances WIN-only streaks for guilds the bot is in, resolves
+    //    guild name/icon for the leaderboard, and skips user-install/bot-less
+    //    guilds. See bot/shared/updateStreaks.ts.)
+    // 3. Purge old sessions + clear cache
     // 3. For each guild: calculate streak → post recap → post new puzzle
   }
 
   protected registerCommands(): void {
     this.commandRegistry.register({ name: 'play', description: '...', handler: this.handlePlay.bind(this) });
     this.commandRegistry.register({ name: 'results', description: '...', handler: this.handleResults.bind(this) });
+    this.commandRegistry.register({ name: 'streak', description: 'See your NewGame streak and the server record', handler: makeStreakHandler('newgame', this.streakRepo, this.logger) });
     this.commandRegistry.register({ name: 'help', description: '...', handler: this.handleHelp.bind(this) });
     this.commandRegistry.register({ name: 'setchannel', description: 'Set this channel for daily messages (admin only)', handler: this.handleSetChannel.bind(this) });
   }
@@ -132,6 +146,22 @@ npm run deploy:newgame
 
 This registers slash commands with Discord. Run again whenever you add/change commands.
 
+## 6b. Register the game in shared allowlists (easy to miss)
+
+Several places hardcode the set of valid games. If you skip these, the new game
+will silently not appear on the leaderboard and some ops scripts will reject it:
+
+- `core/web/BaseGameServer.ts` — `ALLOWED_GAMES` in the `/api/leaderboard`
+  handler (public leaderboard rejects unknown `?game=`).
+- `scripts/seed-streaks.ts` — `ALLOWED_GAMES` (and the `DEFAULT_DB` map).
+- `scripts/backfill-streak-meta.ts` / `scripts/audit-guilds.ts` — `GAME_TOKENS`
+  / `DEFAULT_DB` maps, if you want the streak ops tooling to cover the new game.
+- `BotConfig.gameType` union in `bot/shared/BaseBotApplication.ts` (and any
+  other `'semantle' | 'travle' | 'duotrigordle'` union types) — add `'newgame'`.
+
+No DB migration is needed: streaks and sessions key off `game_type` as a string,
+so a new game reuses the existing `game_sessions` / `streaks` tables.
+
 ---
 
 ## Making It an Activity
@@ -142,59 +172,85 @@ This registers slash commands with Discord. Run again whenever you add/change co
 2. Check **Web** under Supported Platforms
 3. Save
 
-### 8. Create the Web Server
+### 8. Create the Web Server (extends `BaseGameServer`)
+
+Web servers are NOT hand-rolled anymore. `core/web/BaseGameServer.ts` owns the
+~90%-shared parts: Express setup, DB/repo init, the `/game/discord/token`
+exchange, **server-side Discord token verification + signed session tokens**
+(auth middleware), rate limiting, the `/game/complete` results post, the public
+`/api/leaderboard` endpoint, and static file serving. You supply a small config
+object plus two hooks.
 
 Create `web/newgame/server.ts`:
 
 ```typescript
-import express from 'express';
-import path from 'path';
 import { config } from 'dotenv';
-// ... your game imports
+import { Express } from 'express';
+import { BaseGameServer, GameServerConfig } from '../../core/web/BaseGameServer';
+import { resolveUserId } from '../../core/auth/ActivityAuth';
+import { Logger } from '../../core/utils/Logger';
+// ... your game imports (validator, game session class)
 
 config();
-const app = express();
-app.use(express.json());
+const log = new Logger('newgame-web');
 
-// Cache prevention for API routes
-app.use('/game', (_req, res, next) => {
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  next();
-});
+const CONFIG: GameServerConfig = {
+  gameType: 'newgame',
+  dbFile: 'newgame-bot.db',
+  clientIdEnv: 'NEWGAME_CLIENT_ID',
+  clientSecretEnv: 'NEWGAME_CLIENT_SECRET',
+  botTokenEnv: 'NEWGAME_BOT_TOKEN',
+  requiredEnv: ['NEWGAME_CLIENT_ID', 'NEWGAME_CLIENT_SECRET', 'NEWGAME_BOT_TOKEN'], // fail-fast at boot
+  port: process.env.NEWGAME_PORT || 3004,
+  staticDir: 'web/newgame',
+  configLabel: 'newgame-web',
+  rateLimits: [
+    { paths: '/game', maxRequests: 120, windowMs: 60_000, bucket: 'newgame-all' },
+    { paths: ['/game/guess'], maxRequests: 45, windowMs: 60_000, bucket: 'newgame-play' },
+  ],
+  completeEmbed: { title: '🎯 NewGame Results', color: 0x8b5cf6, channelKey: 'newgame' },
+};
 
-// Discord OAuth token exchange
-app.post('/game/discord/token', async (req, res) => {
-  const { code } = req.body;
-  const response = await fetch('https://discord.com/api/oauth2/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: process.env.NEWGAME_CLIENT_ID || '',
-      client_secret: process.env.NEWGAME_CLIENT_SECRET || '',
-      grant_type: 'authorization_code',
-      code,
-    }),
-  });
-  const { access_token } = await response.json() as any;
-  res.json({ access_token });
-});
+const server = new BaseGameServer(CONFIG);
 
-// Your game API endpoints
-app.get('/game/state', ...);
-app.post('/game/guess', ...);
+server.listen(
+  // --- init hook: build the game object, return session hooks ---
+  async (ctx) => {
+    // e.g. load word lists, construct your GameSession with ctx.sessionManager
+    return {
+      startSession: async (userId, serverId) => {
+        // create/find today's persisted session, return its id
+        return /* sessionId */ '';
+      },
+      onDailyCleanup: () => { /* clear any in-memory anon caches */ },
+    };
+  },
+  // --- registerRoutes hook: your game-specific endpoints ---
+  (app: Express, base: BaseGameServer) => {
+    app.get('/game/state', async (req, res) => {
+      const id = resolveUserId(req);                     // server-verified id (NOT req.query.id)
+      const username = req.authUsername ?? (req.query.username as string | undefined);
+      const guildId = req.query.guildId as string | undefined;
+      const sessionId = await base.getOrCreateSession(id, username, guildId);
+      // ... build + return state
+    });
 
-// Results posting (uses /setchannel channel from DB)
-app.post('/game/complete', async (req, res) => {
-  const { message, serverId } = req.body;
-  // Look up channel from configRepo, post embed via Discord REST API
-});
-
-// Serve static files
-app.use(express.static(path.resolve(process.cwd(), 'web/newgame')));
-
-const PORT = process.env.NEWGAME_PORT || 3004;
-app.listen(PORT, () => console.log(`Running on port ${PORT}`));
+    app.post('/game/guess', async (req, res) => {
+      const id = resolveUserId(req);
+      // validate input via core/utils/InputValidator, process guess, return state
+    });
+  },
+);
 ```
+
+Key points vs. the old pattern:
+- **Never trust `req.query.id`.** Use `resolveUserId(req)` / `req.authUsername`
+  — the auth middleware verifies the Discord token and issues a signed session
+  token, so the server knows the real user. (This closed a P0 IDOR.)
+- The token endpoint, `/game/complete`, `/api/leaderboard`, rate limiting, and
+  config validation are all provided by `BaseGameServer` — do not re-implement.
+- Validate guesses with `core/utils/InputValidator` (e.g. `validateWordleGuess`).
+- Look at `web/duotrigordle/server.ts` for a full, current example.
 
 ### 9. Create the Frontend
 
@@ -269,13 +325,17 @@ If the Activity doesn't appear in the shelf: make sure Activities is enabled in 
 ## Checklist Summary
 
 - [ ] Discord app created with bot
-- [ ] Env vars added (TOKEN, CLIENT_ID, CLIENT_SECRET)
-- [ ] Game logic in `games/newgame/`
-- [ ] Bot in `bot/newgame-bot.ts` with /setchannel + daily cron
+- [ ] Env vars added (TOKEN, CLIENT_ID, CLIENT_SECRET) + `.env.example`
+- [ ] Game logic in `games/newgame/` (pure, no Discord dep) + unit tests
+- [ ] Bot in `bot/newgame-bot.ts` with /setchannel + /streak + daily cron
+- [ ] Daily cron calls `updateStreaks(..., clientGuildResolver(this.client, this.logger), ...)` BEFORE the purge
 - [ ] npm scripts added
+- [ ] Game registered in shared allowlists (step 6b: `ALLOWED_GAMES`, gameType unions, ops-script maps)
 - [ ] Commands deployed
 - [ ] Activities enabled in Developer Portal
-- [ ] Web server in `web/newgame/server.ts`
+- [ ] Web server in `web/newgame/server.ts` extending `BaseGameServer` (config + init/registerRoutes hooks)
+- [ ] Endpoints use `resolveUserId(req)` / `req.authUsername` — never `req.query.id`
+- [ ] Guess input validated via `core/utils/InputValidator`
 - [ ] Frontend with SDK auth in `web/newgame/`
 - [ ] SDK bundle copied to `web/newgame/dist/`
 - [ ] Client ID in `<meta>` tag
