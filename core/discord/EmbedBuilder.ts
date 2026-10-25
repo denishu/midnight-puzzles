@@ -26,6 +26,7 @@ export class EmbedBuilder {
     semantle: 0x9932cc,
     travle: 0x00aa55,
     duotrigordle: 0xff6b35,
+    betweenle: 0x3b82f6,
     default: 0x0099ff
   } as const;
 

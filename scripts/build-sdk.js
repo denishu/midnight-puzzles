@@ -20,7 +20,7 @@ const webDir = resolve(__dirname, '..', 'web');
 const travleDir = resolve(webDir, 'travle');
 
 // Games that receive a copy of the bundle (travle is the build source).
-const COPY_TARGETS = ['semantle', 'duotrigordle'];
+const COPY_TARGETS = ['semantle', 'duotrigordle', 'betweenle'];
 
 // 1. Bundle the SDK wrapper for travle.
 await build({

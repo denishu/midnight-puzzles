@@ -32,11 +32,13 @@ const GAME_TOKENS: Record<string, string> = {
   semantle: 'SEMANTLE_BOT_TOKEN',
   travle: 'TRAVLE_BOT_TOKEN',
   duotrigordle: 'DUOTRIGORDLE_BOT_TOKEN',
+  betweenle: 'BETWEENLE_BOT_TOKEN',
 };
 const DEFAULT_DB: Record<string, string> = {
   semantle: 'semantle-bot.db',
   travle: 'travle-bot.db',
   duotrigordle: 'duotrigordle-bot.db',
+  betweenle: 'betweenle-bot.db',
 };
 const ALLOWED = new Set(Object.keys(GAME_TOKENS));
 

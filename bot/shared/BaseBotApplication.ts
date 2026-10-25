@@ -6,7 +6,7 @@ import { DatabaseConnectionFactory, DatabaseConfig } from '../../core/storage/Da
 
 export interface BotConfig {
   botName: string;
-  gameType: 'semantle' | 'travle' | 'duotrigordle';
+  gameType: 'semantle' | 'travle' | 'duotrigordle' | 'betweenle';
   token: string;
   clientId: string;
 }

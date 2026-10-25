@@ -9,6 +9,7 @@ const GAME_LABEL: Record<string, string> = {
   semantle: 'Semantle',
   travle: 'Travle',
   duotrigordle: 'Duotrigordle',
+  betweenle: 'Betweenle',
 };
 
 function pluralDays(n: number): string {

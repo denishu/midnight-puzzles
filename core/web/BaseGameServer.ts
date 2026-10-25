@@ -463,7 +463,7 @@ export class BaseGameServer {
    *    different origin can consume it and the browser/CDN can cache it.
    */
   private installLeaderboard(): void {
-    const ALLOWED_GAMES = new Set(['semantle', 'travle', 'duotrigordle']);
+    const ALLOWED_GAMES = new Set(['semantle', 'travle', 'duotrigordle', 'betweenle']);
 
     this.app.get('/api/leaderboard', async (req, res) => {
       const game = String(req.query.game || this.config.gameType);

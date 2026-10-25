@@ -46,11 +46,12 @@ interface Args {
   clear: boolean;
 }
 
-const ALLOWED_GAMES = new Set(['semantle', 'travle', 'duotrigordle']);
+const ALLOWED_GAMES = new Set(['semantle', 'travle', 'duotrigordle', 'betweenle']);
 const DEFAULT_DB: Record<string, string> = {
   semantle: 'semantle-bot.db',
   travle: 'travle-bot.db',
   duotrigordle: 'duotrigordle-bot.db',
+  betweenle: 'betweenle-bot.db',
 };
 
 function parseArgs(argv: string[]): Args {
