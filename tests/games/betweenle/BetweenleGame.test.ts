@@ -223,20 +223,26 @@ describe('prefix feasibility + range enforcement', () => {
   const A = ['scorn', 'tight', 'tulip'];
   function words() { const w = new BetweenleWords(); w.loadFromArrays(A, D); return w; }
 
-  it('stage 1: rejects a prefix outside the bound band', () => {
+  it('prefixWithinBounds: greys a prefix outside the bound band (stage-1 only)', () => {
     const w = words();
-    expect(w.prefixIsFeasible('ta', 'tight', 'tuber')).toBe(false); // "ta" < "ti"
-    expect(w.prefixIsFeasible('t', 'tight', 'tuber')).toBe(true);
+    // bounds tight..tuber; "ta" < "ti" (lower prefix) -> out of band.
+    expect(w.prefixWithinBounds('ta', 'tight', 'tuber')).toBe(false);
+    // "t" alone is within band.
+    expect(w.prefixWithinBounds('t', 'tight', 'tuber')).toBe(true);
+    // slant..slurp: after "sl", band is sla..slu -> "slz" out, "slu" in.
+    expect(w.prefixWithinBounds('slz', 'slant', 'slurp')).toBe(false);
+    expect(w.prefixWithinBounds('slu', 'slant', 'slurp')).toBe(true);
   });
 
-  it('stage 2: rejects an in-band prefix that no real word has', () => {
+  it('prefixWithinBounds allows an in-band prefix even if no real word has it', () => {
     const w = words();
-    expect(w.prefixIsFeasible('scoq', 'scoop', 'scowl')).toBe(false); // no word "scoq*"
-    expect(w.prefixIsFeasible('scou', 'scoop', 'scowl')).toBe(true);  // scour/scout
+    // "slq" is within the band sla..slu, so the keyboard ALLOWS it; it is only
+    // rejected later at submit (not a real word). Advisory, not a lock.
+    expect(w.prefixWithinBounds('slq', 'slant', 'slurp')).toBe(true);
   });
 
-  it('empty prefix is always feasible', () => {
-    expect(words().prefixIsFeasible('', 'tight', 'tuber')).toBe(true);
+  it('empty prefix is always within bounds', () => {
+    expect(words().prefixWithinBounds('', 'tight', 'tuber')).toBe(true);
   });
 
   it('isInRange enforces a strict open interval + dictionary membership', () => {

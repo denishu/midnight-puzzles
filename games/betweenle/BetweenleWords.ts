@@ -85,52 +85,23 @@ export class BetweenleWords {
   }
 
   /**
-   * Can the typed `prefix` still become a real guess that is strictly between
-   * the current bounds? Powers the live keyboard + out-of-range rejection.
+   * Is the typed `prefix` still within the current bound BAND? Drives the live
+   * keyboard's letter-greying (advisory only — the UI never blocks input; an
+   * out-of-band or non-word guess is rejected at SUBMIT, not while typing).
    *
-   * Two stages, cheap-first:
-   *   1. RANGE (O(1)): compare `prefix` against the equal-length prefix of each
-   *      bound. If `prefix < lower[:n]` or `prefix > upper[:n]`, it can never be
-   *      in range -> reject immediately (e.g. "ta" with bounds tight..tuber).
-   *   2. EXISTENCE (O(log N)): binary-search the sorted dictionary for the first
-   *      word >= prefix; feasible iff that word startsWith(prefix) AND lies
-   *      STRICTLY between the bounds (bounds are already-guessed words, so the
-   *      open interval excludes them). This rejects in-band-but-nonexistent
-   *      prefixes like "slq".
+   * Pure O(1) comparison against the equal-length prefix of each bound: feasible
+   * iff `lower[:n] <= prefix <= upper[:n]`. No dictionary lookup — a prefix like
+   * "slq" within bounds slant..slurp is "within bounds" here (keyboard allows
+   * it); it only fails later at submit if no real "slq.." word exists.
    *
-   * `lower`/`upper` are the current bound words (use the sentinels 'aaaaa' /
-   * 'zzzzz' when a side hasn't been pinned by a real guess yet). `prefix` may be
-   * 1-5 chars; an empty prefix is always feasible.
+   * `lower`/`upper` are the current bound words (sentinels 'aaaaa'/'zzzzz' until
+   * pinned). Empty prefix is always within bounds.
    */
-  prefixIsFeasible(prefix: string, lower: string, upper: string): boolean {
+  prefixWithinBounds(prefix: string, lower: string, upper: string): boolean {
     const p = prefix.toLowerCase();
     if (p.length === 0) return true;
     const n = p.length;
-
-    // Stage 1: range on the equal-length prefix slices.
-    if (p < lower.slice(0, n)) return false;
-    if (p > upper.slice(0, n)) return false;
-
-    // Stage 2: a real dictionary word with this prefix, strictly in (lower, upper).
-    // The first word >= prefix may itself be <= lower (below the bound) while a
-    // LATER word sharing the prefix is in range, so advance past any words that
-    // are <= lower before checking prefix-membership and the upper bound.
-    let i = this.lowerBoundIndex(p);
-    while (i < this.dictionary.length && this.dictionary[i]! <= lower) i++;
-    const w = this.dictionary[i];
-    if (!w || !w.startsWith(p)) return false;
-    return w < upper;
-  }
-
-  /** Index of the first dictionary word >= `target` (binary search). */
-  private lowerBoundIndex(target: string): number {
-    let lo = 0, hi = this.dictionary.length;
-    while (lo < hi) {
-      const mid = (lo + hi) >>> 1;
-      if (this.dictionary[mid]! < target) lo = mid + 1;
-      else hi = mid;
-    }
-    return lo;
+    return p >= lower.slice(0, n) && p <= upper.slice(0, n);
   }
 
   /** Is `word` a valid, in-range guess strictly between the given bounds? */
