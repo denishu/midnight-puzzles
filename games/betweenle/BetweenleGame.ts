@@ -122,6 +122,11 @@ export class BetweenleGame {
     if (state.guesses.some(g => g.word === word)) {
       return { ok: false, error: `You already guessed "${word}".` };
     }
+    // Out-of-range: must lie strictly between the current bounds. A rejected
+    // guess does NOT consume one of the 14 tries (guardrail, like a non-word).
+    if (!this.words.isInRange(word, state.lowerBound, state.upperBound)) {
+      return { ok: false, error: `"${word}" is outside the current range (${state.lowerBound}–${state.upperBound}).` };
+    }
 
     const secret = state.secret;
     let direction: Direction;

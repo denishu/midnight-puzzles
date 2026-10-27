@@ -148,14 +148,25 @@ describe('BetweenleGame win/loss + scoring', () => {
   });
 
   it('loses after 14 wrong guesses, scoring 0', () => {
-    const game = freshGame();
-    const s = stateWithSecret(game, 'mango');
-    // 14 distinct non-'mango' dictionary words.
-    const wrong = DICT.filter(w => w !== 'mango').slice(0, MAX_GUESSES);
-    expect(wrong.length).toBe(MAX_GUESSES);
+    // Under range enforcement, a loss needs 14 distinct IN-RANGE guesses that
+    // miss. Use a dictionary of 15+ words all below the secret, guessed in
+    // ascending order so each stays above the (rising) lower bound and below
+    // the secret — all accepted, none the answer.
+    const words = new BetweenleWords();
+    const below = [
+      'aaaab', 'aaaac', 'aaaad', 'aaaae', 'aaaaf', 'aaaag', 'aaaah',
+      'aaaai', 'aaaaj', 'aaaak', 'aaaal', 'aaaam', 'aaaan', 'aaaao',
+    ]; // 14 distinct in-range words, all < secret
+    const secret = 'mmmmm';
+    words.loadFromArrays([secret], [...below, secret]);
+    const game = new BetweenleGame(words);
+    const s = game.newState(new Date('2026-10-25T12:00:00Z'));
+    s.secret = secret; s.guesses = []; s.lowerBound = 'aaaaa'; s.upperBound = 'zzzzz';
+    s.isComplete = false; s.isWin = false; s.score = 0;
+
     let last;
-    for (const w of wrong) last = game.guess(s, w);
-    expect(last!.ok).toBe(true);
+    for (const w of below) { last = game.guess(s, w); expect(last.ok).toBe(true); }
+    expect(s.guesses.length).toBe(MAX_GUESSES);
     expect(s.isComplete).toBe(true);
     expect(s.isWin).toBe(false);
     expect(s.score).toBe(0);
@@ -201,6 +212,69 @@ describe('daily determinism', () => {
   it('is stable across constructions (no per-run randomness)', () => {
     const d = new Date('2026-11-01T00:00:00Z');
     expect(freshGame().secretForDate(d)).toBe(freshGame().secretForDate(d));
+  });
+});
+
+describe('prefix feasibility + range enforcement', () => {
+  const D = [
+    'scoop', 'scorn', 'scour', 'scout', 'scowl', 'tiger', 'tight', 'tilde',
+    'tuber', 'tulip', 'uvula', 'vivid',
+  ];
+  const A = ['scorn', 'tight', 'tulip'];
+  function words() { const w = new BetweenleWords(); w.loadFromArrays(A, D); return w; }
+
+  it('stage 1: rejects a prefix outside the bound band', () => {
+    const w = words();
+    expect(w.prefixIsFeasible('ta', 'tight', 'tuber')).toBe(false); // "ta" < "ti"
+    expect(w.prefixIsFeasible('t', 'tight', 'tuber')).toBe(true);
+  });
+
+  it('stage 2: rejects an in-band prefix that no real word has', () => {
+    const w = words();
+    expect(w.prefixIsFeasible('scoq', 'scoop', 'scowl')).toBe(false); // no word "scoq*"
+    expect(w.prefixIsFeasible('scou', 'scoop', 'scowl')).toBe(true);  // scour/scout
+  });
+
+  it('empty prefix is always feasible', () => {
+    expect(words().prefixIsFeasible('', 'tight', 'tuber')).toBe(true);
+  });
+
+  it('isInRange enforces a strict open interval + dictionary membership', () => {
+    const w = words();
+    expect(w.isInRange('tilde', 'tight', 'tuber')).toBe(true);
+    expect(w.isInRange('uvula', 'tight', 'tuber')).toBe(false); // above upper
+    expect(w.isInRange('scorn', 'tight', 'tuber')).toBe(false); // below lower
+    expect(w.isInRange('tight', 'tight', 'tuber')).toBe(false); // equals lower
+    expect(w.isInRange('zzzzz', 'tight', 'tuber')).toBe(false); // not a word
+  });
+
+  it('guess() rejects an out-of-range word WITHOUT consuming a guess', () => {
+    const game = new BetweenleGame(words());
+    const s = game.newState(new Date('2026-10-25T12:00:00Z'));
+    s.secret = 'tulip'; s.guesses = []; s.lowerBound = 'aaaaa'; s.upperBound = 'zzzzz';
+    s.isComplete = false; s.isWin = false; s.score = 0;
+
+    expect(game.guess(s, 'tiger').ok).toBe(true);
+    expect(s.lowerBound).toBe('tiger');
+    const before = s.guesses.length;
+    const out = game.guess(s, 'scorn'); // now below the lower bound
+    expect(out.ok).toBe(false);
+    expect(s.guesses.length).toBe(before); // not consumed
+  });
+
+  it('the secret always stays strictly within the bounds (winnable)', () => {
+    const w = words();
+    const game = new BetweenleGame(w);
+    const s = game.newState(new Date('2026-10-25T12:00:00Z'));
+    s.secret = 'tulip'; s.guesses = []; s.lowerBound = 'aaaaa'; s.upperBound = 'zzzzz';
+    s.isComplete = false; s.isWin = false; s.score = 0;
+
+    game.guess(s, 'tiger'); // lower -> tiger
+    game.guess(s, 'uvula'); // upper -> uvula
+    expect(w.isInRange('tulip', s.lowerBound, s.upperBound)).toBe(true);
+    const win = game.guess(s, 'tulip');
+    expect(win.ok).toBe(true);
+    expect(s.isWin).toBe(true);
   });
 });
 
