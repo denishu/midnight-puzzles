@@ -141,3 +141,38 @@
   backdrop-filter: blur(12px);
   box-shadow: var(--shadow-lg);
 }
+
+
+/* --- Shared "How to Play" popup (opt-in via these classes) ----------------
+ * Uniform across all games: a full-screen dark overlay with a centered card
+ * and a "Got it" button. The button + heading use --game-accent, so each game
+ * colors it with its own accent automatically (matching the game-over CTA).
+ * Toggle visibility by adding/removing `.active` on the overlay element. */
+.mp-infopopup {
+  position: fixed; inset: 0; z-index: 1500; display: none;
+  align-items: center; justify-content: center; padding: 24px;
+  background: rgba(0, 0, 0, 0.7);
+}
+.mp-infopopup.active { display: flex; }
+.mp-infocard {
+  width: 100%; max-width: 420px;
+  background: var(--bg-elev); border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg); padding: var(--space-5);
+  backdrop-filter: blur(12px); box-shadow: var(--shadow-lg);
+}
+.mp-infocard h2 {
+  font-family: var(--font-display); color: var(--game-accent);
+  font-size: 20px; margin-bottom: var(--space-3);
+}
+.mp-infocard p { font-size: 14px; line-height: 1.6; margin-bottom: var(--space-2); color: var(--muted); }
+.mp-infocard b { color: var(--fg); }
+.mp-infocard .mp-legend { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: middle; margin-right: 6px; }
+.mp-infocard .mp-gotit {
+  margin-top: var(--space-3); padding: var(--space-3) var(--space-5);
+  border: none; border-radius: var(--radius-md);
+  background: var(--game-accent); color: #fff;
+  font-family: var(--font-body); font-weight: 700; font-size: 14px; cursor: pointer;
+  transition: filter var(--t-fast), transform var(--t-fast);
+}
+.mp-infocard .mp-gotit:hover { filter: brightness(1.08); }
+.mp-infocard .mp-gotit:active { transform: translateY(1px); }

@@ -184,15 +184,6 @@ body { font-family: var(--font-body); background: #0a0e1a; color: #e0e0e0; heigh
 /* Info button & popup */
 #info-btn { font-size: 14px; cursor: pointer; opacity: 0.5; vertical-align: middle; margin-left: 4px; transition: opacity 0.2s; }
 #info-btn:hover { opacity: 1; }
-#info-popup {
-  display: none; position: absolute; top: 70px; right: 20px; width: 300px; z-index: 1500;
-  background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 12px; padding: 20px; backdrop-filter: blur(12px);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5); font-size: 13px; line-height: 1.6; color: #94a3b8;
-}
-#info-popup.active { display: block; animation: toastIn 0.2s ease-out; }
-#info-popup h3 { color: #f1f5f9; font-size: 14px; margin-bottom: 10px; }
-#info-popup .dot-legend { display: inline-block; width: 8px; height: 8px; border-radius: 50%; vertical-align: middle; margin-right: 4px; }
 </style>
 
 <div id="map-panel"><div id="map"></div></div>
@@ -222,16 +213,18 @@ body { font-family: var(--font-body); background: #0a0e1a; color: #e0e0e0; heigh
   <pre id="go-share" style="display:none; background:rgba(0,0,0,0.3); padding:12px; border-radius:8px; font-size:14px; margin-top:12px; text-align:center; user-select:all; cursor:pointer;"></pre>
   <button id="go-close">Close</button>
 </div>
-<div id="info-popup">
-  <span id="info-close" style="position:absolute; top:10px; right:14px; cursor:pointer; font-size:18px; color:#64748b; transition:color 0.2s;">✕</span>
-  <h3>How to Play</h3>
-  Connect the two highlighted countries by guessing a chain of bordering countries between them.
-  <br><br>
-  <span class="dot-legend" style="background:#22c55e"></span> Green — your guess shortened the path<br>
-  <span class="dot-legend" style="background:#eab308"></span> Yellow — nearby, but didn't shorten it<br>
-  <span class="dot-legend" style="background:#ef4444"></span> Red — far from any useful path<br>
-  <br>
-  Find a complete chain before you run out of guesses!
+<div id="info-popup" class="mp-infopopup">
+  <div class="mp-infocard">
+    <h2>How to Play</h2>
+    <p>Connect the two highlighted countries by guessing a chain of bordering countries between them.</p>
+    <p>
+      <span class="mp-legend" style="background:#22c55e"></span> Green — your guess shortened the path<br>
+      <span class="mp-legend" style="background:#eab308"></span> Yellow — nearby, but didn't shorten it<br>
+      <span class="mp-legend" style="background:#ef4444"></span> Red — far from any useful path
+    </p>
+    <p>Find a complete chain before you run out of guesses!</p>
+    <button id="info-close" class="mp-gotit">Got it</button>
+  </div>
 </div>
 <style>
 @media (max-width: 768px) {
@@ -243,7 +236,6 @@ body { font-family: var(--font-body); background: #0a0e1a; color: #e0e0e0; heigh
   #puzzle-label { font-size: 18px; }
   #input-area { padding: 12px 16px; }
   #guess-list { padding: 12px 16px; }
-  #info-popup { right: 10px; left: 10px; width: auto; top: 60px; }
   #status-bar { bottom: auto; top: 10px; }
   #game-over h2 { font-size: 24px; }
   #game-over p { font-size: 14px; padding: 0 20px; }

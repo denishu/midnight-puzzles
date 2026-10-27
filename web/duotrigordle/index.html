@@ -286,17 +286,6 @@ body {
 #go-close:hover { transform: translateY(-1px); filter: brightness(1.1); }
 
 /* Info popup */
-#info-popup {
-  display: none; position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
-  width: 320px; z-index: 1500;
-  background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 12px; padding: 20px; backdrop-filter: blur(12px);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5); font-size: 13px; line-height: 1.6; color: #94a3b8;
-}
-#info-popup.active { display: block; animation: toastIn 0.2s ease-out; }
-#info-popup h3 { color: #f1f5f9; font-size: 14px; margin-bottom: 10px; }
-.dot-legend { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
-
 /* Mobile layout */
 @media (max-width: 600px) {
   #app { max-width: 100%; }
@@ -362,18 +351,18 @@ body {
   <button id="go-close">Close</button>
 </div>
 
-<div id="info-popup">
-  <span id="info-close" style="position:absolute; top:10px; right:14px; cursor:pointer; font-size:18px; color:#64748b; transition:color 0.2s;">✕</span>
-  <h3>How to Play</h3>
-  Solve <b style="color:#f1f5f9">32 Wordle puzzles</b> at the same time!
-  <br><br>
-  Each guess applies to all 32 grids. You have <b style="color:#f1f5f9">37 guesses</b> to solve them all.
-  <br><br>
-  <span class="dot-legend" style="background:#22c55e"></span> Green — correct letter, correct position<br>
-  <span class="dot-legend" style="background:#eab308"></span> Yellow — correct letter, wrong position<br>
-  <span class="dot-legend" style="background:#374151"></span> Gray — letter not in word<br>
-  <br>
-  The on-screen keyboard shows the best status for each letter across all grids. Tap a grid to filter the keyboard to just that word — tap again to go back to the global view.
+<div id="info-popup" class="mp-infopopup">
+  <div class="mp-infocard">
+    <h2>How to Play</h2>
+    <p>Solve <b>32 Wordle puzzles</b> at the same time! Each guess applies to all 32 grids. You have <b>37 guesses</b> to solve them all.</p>
+    <p>
+      <span class="mp-legend" style="background:#22c55e"></span> Green — correct letter, correct position<br>
+      <span class="mp-legend" style="background:#eab308"></span> Yellow — correct letter, wrong position<br>
+      <span class="mp-legend" style="background:#374151"></span> Gray — letter not in word
+    </p>
+    <p>The on-screen keyboard shows the best status for each letter across all grids. Tap a grid to filter the keyboard to just that word — tap again to go back.</p>
+    <button id="info-close" class="mp-gotit">Got it</button>
+  </div>
 </div>
 
 <script type="module" src="app-game.js?v=10"></script>

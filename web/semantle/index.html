@@ -150,18 +150,6 @@ body {
   font-weight: 700; font-size: 14px; cursor: pointer;
 }
 
-/* Info popup */
-#info-popup {
-  display: none; position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
-  width: 320px; z-index: 1500;
-  background: var(--bg-elev); border: 1px solid var(--card-border);
-  border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-lg);
-  font-size: 13px; line-height: 1.6; color: var(--muted);
-}
-#info-popup.active { display: block; animation: toastIn 0.2s ease-out; }
-#info-popup h3 { font-family: var(--font-display); color: var(--game-accent); font-size: 16px; margin-bottom: 10px; }
-#info-popup .dot-legend { display: inline-block; width: 8px; height: 8px; border-radius: 50%; vertical-align: middle; margin-right: 4px; }
-
 @media (max-width: 600px) {
   #header { padding-top: 47px; }
 }
@@ -189,20 +177,20 @@ body {
   <button id="go-close">Close</button>
 </div>
 
-<div id="info-popup">
-  <span id="info-close" style="position:absolute; top:10px; right:14px; cursor:pointer; font-size:18px; color:var(--muted); transition:color 0.2s;">✕</span>
-  <h3>How to Play</h3>
-  Guess the secret word using <b>semantic similarity</b> — how closely related words are in meaning, not spelling.
-  <br><br>
-  Words in the top 1000 most similar get a numbered rank. The closer to #1, the warmer you are.
-  <br><br>
-  <span class="dot-legend" style="background:#ef4444"></span> Hot — top 10, very close<br>
-  <span class="dot-legend" style="background:#f59e0b"></span> Warm — top 100<br>
-  <span class="dot-legend" style="background:#a855f7"></span> Ranked — top 1000<br>
-  <span class="dot-legend" style="background:#60a5fa"></span> Tepid — above 25% similarity, outside top 1000<br>
-  <span class="dot-legend" style="background:hsl(250,15%,45%)"></span> Cold — below 25% similarity<br>
-  <br>
-  Use the 💡 button for a hint. Keep guessing until you find the exact word!
+<div id="info-popup" class="mp-infopopup">
+  <div class="mp-infocard">
+    <h2>How to Play</h2>
+    <p>Guess the secret word using <b>semantic similarity</b> — how closely related words are in meaning, not spelling. Words in the top 1000 most similar get a numbered rank; the closer to #1, the warmer you are.</p>
+    <p>
+      <span class="mp-legend" style="background:#ef4444"></span> Hot — top 10, very close<br>
+      <span class="mp-legend" style="background:#f59e0b"></span> Warm — top 100<br>
+      <span class="mp-legend" style="background:#a855f7"></span> Ranked — top 1000<br>
+      <span class="mp-legend" style="background:#60a5fa"></span> Tepid — above 25% similarity<br>
+      <span class="mp-legend" style="background:hsl(250,15%,45%)"></span> Cold — below 25% similarity
+    </p>
+    <p>Use the 💡 button for a hint. Keep guessing until you find the exact word!</p>
+    <button id="info-close" class="mp-gotit">Got it</button>
+  </div>
 </div>
 
 <script type="module" src="app-game.js?v=8"></script>
