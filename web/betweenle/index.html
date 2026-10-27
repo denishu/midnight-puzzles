@@ -6,100 +6,225 @@
 <!-- TODO: replace with your Betweenle Discord application Client ID -->
 <meta name="discord-client-id" content="REPLACE_WITH_BETWEENLE_CLIENT_ID">
 <title>Betweenle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="shared/tokens.css">
 <style>
+:root {
+  /* Betweenle (hermit crab): cranberry accent, chartreuse + sand highlights. */
+  --cranberry-deep: #8F3F50;        /* true brand cranberry — used for fills */
+  --cranberry: hsl(344, 52%, 57%);  /* brightened for legible accent on dark bg (~#C85A74) */
+  --chartreuse: #C7D94B;
+  --sand: #F1E4C8;
+  --game-accent: var(--cranberry);
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  font-family: var(--font-body, system-ui, sans-serif);
-  background: #000; color: #e2e8f0; height: 100vh;
-  display: flex; flex-direction: column; align-items: center;
-  overflow: hidden; -webkit-font-smoothing: antialiased;
+  font-family: var(--font-body); background: var(--bg); color: var(--fg);
+  height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+  align-items: center; -webkit-font-smoothing: antialiased;
 }
-#app { width: 100%; max-width: 560px; height: 100vh; display: flex; flex-direction: column; }
+
+#app {
+  width: 100%; max-width: 520px; height: 100vh;
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--bg); box-shadow: 0 0 60px rgba(0, 0, 0, 0.4);
+}
+
+/* Header */
 #header {
-  padding: 16px 20px 12px; text-align: center;
-  background: linear-gradient(180deg, rgba(59,130,246,0.1) 0%, transparent 100%);
-  border-bottom: 1px solid rgba(59,130,246,0.15); flex-shrink: 0;
+  padding: 24px 24px 16px; text-align: center; position: relative;
+  background: linear-gradient(180deg, var(--bg-elev) 0%, var(--bg) 100%);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
-#header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.02em; color: #93c5fd; }
-#sub { font-size: 12px; color: #64748b; margin-top: 4px; }
-
-#bounds {
-  display: flex; justify-content: space-between; gap: 8px;
-  padding: 10px 20px; font-variant-numeric: tabular-nums; flex-shrink: 0;
+#header h1 {
+  font-family: var(--font-display);
+  font-size: 22px; font-weight: 700; letter-spacing: 0.02em;
+  color: var(--game-accent);
 }
-.bound { flex: 1; text-align: center; padding: 8px; border-radius: 8px; background: #0f172a; }
-.bound .label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: .08em; }
-.bound .word { font-size: 18px; font-weight: 700; letter-spacing: .1em; }
+#sub { font-size: 13px; color: var(--muted); margin-top: 6px; }
 
-#guesses { flex: 1; overflow-y: auto; padding: 4px 20px; }
+#info-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 1.5px solid currentColor; color: var(--muted);
+  font-size: 14px; font-weight: 400; font-style: normal;
+  font-family: var(--font-body); text-transform: none;
+  cursor: pointer; opacity: 0.6; vertical-align: middle; margin-left: 6px;
+  transition: opacity var(--t-fast), color var(--t-fast);
+}
+#info-btn:hover { opacity: 1; color: var(--game-accent); }
+
+/* Number line */
+#numberline {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-4) 24px var(--space-2); flex-shrink: 0;
+}
+.nl-end {
+  font-family: var(--font-body); font-weight: 700; font-size: 13px;
+  letter-spacing: .06em; color: var(--sand); white-space: nowrap;
+}
+#nl-track {
+  position: relative; flex: 1; height: 6px; border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, hsla(344,40%,45%,0.35), hsla(68,55%,55%,0.35));
+  margin-top: 14px; margin-bottom: 14px;
+}
+.nl-tick {
+  position: absolute; top: 50%; width: 2px; height: 14px; transform: translate(-50%, -50%);
+  background: var(--game-accent);
+}
+.nl-tick .nl-dist {
+  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+  font-size: 9px; color: var(--game-accent); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+/* Nudge the two end labels inward so they don't sit on top of the bound words. */
+.nl-tick.nl-lo .nl-dist { left: 0; transform: none; }
+.nl-tick.nl-hi .nl-dist { left: auto; right: 0; transform: none; }
+.nl-arrow { color: var(--chartreuse); opacity: 1; font-weight: 900; font-size: 15px; vertical-align: middle; }
+/* Proportional position dot between the two active bounds. */
+.nl-dot {
+  position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%;
+  transform: translate(-50%, -50%); background: var(--chartreuse);
+  border: 2px solid var(--bg); box-shadow: 0 0 8px hsla(68, 55%, 55%, 0.6);
+}
+
+/* Guess list */
+#guesses { flex: 1; overflow-y: auto; padding: 4px 24px; }
 .guess-row {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 12px; margin-bottom: 6px; border-radius: 8px; background: #111827;
+  padding: var(--space-3) var(--space-4); margin-bottom: var(--space-2);
+  border-radius: var(--radius-md); background: var(--card);
+  border: 1px solid var(--card-border);
 }
-.guess-row.correct { background: #14532d; }
-.guess-row .word { font-size: 18px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
-.guess-row .meta { font-size: 13px; color: #93c5fd; font-variant-numeric: tabular-nums; }
-.guess-row .dist { color: #fbbf24; font-weight: 700; }
+.guess-row.correct {
+  background: hsla(68, 63%, 57%, 0.18);               /* chartreuse tint */
+  border-color: var(--chartreuse);
+}
+.guess-row .word {
+  font-size: 18px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; font-family: var(--font-body);
+}
+.guess-row .meta { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.guess-row .meta .arrow { color: var(--chartreuse); font-weight: 800; }
+.guess-row .dist { color: var(--game-accent); font-weight: 800; }
+.guess-row.correct .meta { color: var(--chartreuse); font-weight: 700; }
 
-#entry { padding: 12px 20px 20px; flex-shrink: 0; }
-#row-input { display: flex; gap: 8px; }
+/* Entry */
+#entry { padding: var(--space-4) 24px 20px; flex-shrink: 0; border-top: 1px solid var(--border); }
+#row-input { display: flex; gap: var(--space-2); }
 #guess-input {
   flex: 1; font-size: 20px; letter-spacing: .25em; text-transform: uppercase;
-  padding: 12px; border-radius: 8px; border: 2px solid #1e293b; background: #0f172a; color: #e2e8f0;
-  text-align: center;
+  padding: var(--space-3) var(--space-4); border-radius: var(--radius-md);
+  border: 1px solid var(--border); background: hsla(250, 40%, 14%, 0.6);
+  color: var(--fg); font-family: var(--font-body); text-align: center;
+  outline: none; transition: border-color var(--t-fast), box-shadow var(--t-fast);
 }
-#submit-btn {
-  padding: 0 20px; border: none; border-radius: 8px; background: #3b82f6; color: #fff;
-  font-weight: 700; cursor: pointer;
-}
-#submit-btn:disabled { opacity: .5; cursor: default; }
-#status { text-align: center; min-height: 20px; margin-top: 10px; font-size: 14px; color: #f87171; }
-#status.ok { color: #4ade80; }
-#remaining { text-align: center; font-size: 12px; color: #64748b; margin-top: 6px; }
+#guess-input:focus { border-color: var(--game-accent); box-shadow: 0 0 0 3px hsla(344, 52%, 57%, 0.2); }
+#status { text-align: center; min-height: 20px; margin-top: var(--space-2); font-size: 14px; color: hsl(0, 70%, 68%); }
+#status.ok { color: var(--chartreuse); }
 
-#info-popup {
-  position: fixed; inset: 0; background: rgba(0,0,0,.85); display: none;
-  align-items: center; justify-content: center; padding: 24px; z-index: 10;
+/* Scoreboard: guesses-used | 5-3-3-2-1 dot clusters | live achievable score */
+#scoreboard {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  margin-top: var(--space-2); margin-bottom: var(--space-3);
 }
-#info-popup.active { display: flex; }
-#info-card { max-width: 420px; background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 24px; }
-#info-card h2 { color: #93c5fd; margin-bottom: 12px; }
-#info-card p { font-size: 14px; line-height: 1.6; margin-bottom: 10px; color: #cbd5e1; }
-#info-card button { margin-top: 8px; padding: 10px 16px; border: none; border-radius: 8px; background: #3b82f6; color: #fff; font-weight: 700; cursor: pointer; }
+.sb-used, .sb-score {
+  font-family: var(--font-display); font-weight: 700; font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.sb-side { display: flex; flex-direction: column; align-items: center; min-width: 52px; }
+.sb-used { color: var(--sand); }
+.sb-score { color: var(--chartreuse); }
+.sb-label { font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-top: 1px; }
+.sb-dots { display: flex; align-items: center; gap: 18px; flex: 1; justify-content: center; }
+.dot-group { display: flex; gap: 5px; }
+.dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--card-border);                 /* unused: muted */
+  transition: background var(--t-fast), box-shadow var(--t-fast);
+}
+.dot.filled { background: var(--game-accent); }   /* used: cranberry */
+.dot.active { box-shadow: 0 0 0 2px hsla(68, 55%, 55%, 0.7); } /* next guess sits here */
+
+/* Letter line (A–Z): a read-only range guide, NOT an input device. The user
+   types in #guess-input; this only shows which next letters are in the current
+   bound band (greyed = out of band). One row on desktop, wraps on mobile. */
+#keyboard {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 4px;
+  padding: var(--space-2) 16px var(--space-3); flex-shrink: 0;
+}
+.key {
+  flex: 0 0 auto; min-width: 26px; height: 34px; padding: 0 2px;
+  border-radius: var(--radius-sm); background: var(--card); color: var(--fg);
+  font-family: var(--font-body); font-weight: 700; font-size: 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+  text-transform: uppercase; user-select: none;
+  transition: opacity var(--t-fast), background var(--t-fast), color var(--t-fast);
+}
+/* In-band letters get a subtle accent tint so the active band reads clearly. */
+.key:not(.greyed) { background: hsla(344, 40%, 45%, 0.28); color: var(--sand); }
+.key.greyed { opacity: 0.25; background: var(--card); color: var(--faint); }
+
+/* Game-over overlay */
+#game-over {
+  position: fixed; inset: 0; display: none; z-index: 20;
+  flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3);
+  padding: 24px; background: rgba(0,0,0,.75); backdrop-filter: blur(6px); text-align: center;
+}
+#game-over.active { display: flex; }
+#game-over h2 { font-family: var(--font-display); font-size: 28px; }
+#game-over.win h2 { color: var(--chartreuse); }
+#game-over.loss h2 { color: var(--sand); }
+#game-over p { font-size: 15px; color: var(--muted); line-height: 1.6; }
+#game-over p b { color: var(--fg); }
+#go-close {
+  margin-top: var(--space-2); padding: var(--space-3) var(--space-5); border: none;
+  border-radius: var(--radius-md); background: var(--game-accent); color: #fff;
+  font-family: var(--font-body); font-weight: 700; cursor: pointer;
+}
 </style>
 </head>
 <body>
   <div id="app">
     <div id="header">
-      <h1>BETWEENLE <span id="puzzle-no"></span></h1>
-      <div id="sub">Find the secret word by alphabetical order. <a href="#" id="info-btn" style="color:#3b82f6">How to play</a></div>
+      <h1>🔤 Betweenle <span id="info-btn" title="How to play">i</span></h1>
+      <div id="sub">Find the secret word by alphabetical order</div>
     </div>
 
-    <div id="bounds">
-      <div class="bound"><div class="label">After ⬆️</div><div class="word" id="lower">aaaaa</div></div>
-      <div class="bound"><div class="label">Before ⬇️</div><div class="word" id="upper">zzzzz</div></div>
+    <div id="numberline">
+      <div class="nl-end" id="nl-lower">aaaaa</div>
+      <div id="nl-track"></div>
+      <div class="nl-end" id="nl-upper">zzzzz</div>
     </div>
 
     <div id="guesses"></div>
 
+    <div id="keyboard" aria-hidden="true"></div>
+
     <div id="entry">
       <div id="row-input">
-        <input id="guess-input" maxlength="5" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="GUESS" />
-        <button id="submit-btn">Enter</button>
+        <input id="guess-input" type="text" maxlength="5" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="type a 5-letter word" />
       </div>
       <div id="status"></div>
-      <div id="remaining"></div>
+      <div id="scoreboard"></div>
     </div>
   </div>
 
-  <div id="info-popup">
-    <div id="info-card">
-      <h2>How to play Betweenle</h2>
-      <p>Guess the daily secret 5-letter word using <b>alphabetical order</b> — not meaning.</p>
+  <div id="game-over">
+    <h2 id="go-title"></h2>
+    <p id="go-msg"></p>
+    <button id="go-close">Close</button>
+  </div>
+
+  <div id="info-popup" class="mp-infopopup">
+    <div class="mp-infocard">
+      <h2>How to Play</h2>
+      <p>Guess the daily secret 5-letter word using <b>alphabetical order</b>.</p>
       <p>Each guess tells you whether the secret comes <b>before</b> or <b>after</b> it in the dictionary, and a <b>distance %</b> showing how close you are (smaller = closer). Narrow it down like a binary search.</p>
-      <p>You have <b>14 guesses</b>. Solve in 1–5 → <b>5</b>, 6–8 → <b>4</b>, 9–11 → <b>3</b>, 12–13 → <b>2</b>, 14 → <b>1</b>.</p>
-      <button id="info-close">Got it</button>
+      <p>You have <b>14 guesses</b>. Your score will be based on the number of guesses it took to find the word.</p>
+      <button id="info-close" class="mp-gotit">Got it</button>
     </div>
   </div>
 
