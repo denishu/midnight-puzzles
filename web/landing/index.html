@@ -52,7 +52,7 @@
   <div class="section-inner">
     <div class="section-header">
       <h2>Choose Your Companion</h2>
-      <p>Three nocturnal friends ready to bring games to your server.</p>
+      <p>Four nocturnal friends ready to bring games to your server.</p>
     </div>
 
     <div class="bots-list">
@@ -124,6 +124,29 @@
           </div>
         </div>
       </div>
+
+      <!-- Betweenle -->
+      <div class="bot-card reversed">
+        <div class="bot-avatar-wrap">
+          <div class="bot-glow glow-primary"></div>
+          <img src="assets/betweenle_logo.png" alt="Betweenle Avatar" class="bot-avatar">
+        </div>
+        <div class="bot-info">
+          <span class="bot-tag tag-secondary">Alphabetical Word Search</span>
+          <h3>Betweenle</h3>
+          <p>Find the secret 5-letter word by alphabetical order. Each guess tells you whether the word comes before or after it in the dictionary — binary-search your way to the answer.</p>
+          <div class="bot-buttons">
+            <a href="https://discord.com/oauth2/authorize?client_id=1563972415015485491&permissions=18432&integration_type=0&scope=bot+applications.commands" target="_blank" rel="noreferrer" class="btn btn-primary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              Add to Discord
+            </a>
+            <button class="btn btn-outline" onclick="openPreview('assets/betweenle_logo.png', 'Betweenle')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              Preview
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -158,6 +181,13 @@
         </div>
         <ol class="lb-list" data-list="duotrigordle"><li class="lb-loading">Loading…</li></ol>
       </div>
+      <div class="lb-card" data-game="betweenle">
+        <div class="lb-card-head">
+          <img src="assets/betweenle_logo.png" alt="" class="lb-game-logo">
+          <h3>Betweenle</h3>
+        </div>
+        <ol class="lb-list" data-list="betweenle"><li class="lb-loading">Loading…</li></ol>
+      </div>
     </div>
   </div>
 </section>
@@ -172,7 +202,7 @@
       <div class="feature-card">
         <div class="feature-icon icon-primary">🧩</div>
         <h4>Open Source</h4>
-        <p>Midnight Puzzles is completely open-source. All 3 bots share basic infrastructure, which can be used to develop more bots should you want to.</p>
+        <p>Midnight Puzzles is completely open-source. All the bots share basic infrastructure, which can be used to develop more bots should you want to.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon icon-accent">💬</div>
@@ -234,7 +264,7 @@ document.addEventListener('keydown', function(e) {
 // So we fetch same-origin from each game's own path. Any failure degrades
 // gracefully to a friendly empty state rather than breaking the page.
 (function initLeaderboard() {
-  var GAMES = ['semantle', 'travle', 'duotrigordle'];
+  var GAMES = ['semantle', 'travle', 'duotrigordle', 'betweenle'];
 
   function iconUrl(serverId, iconHash) {
     if (!iconHash) return null;
