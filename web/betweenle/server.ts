@@ -23,7 +23,7 @@ const CONFIG: GameServerConfig = {
     { paths: '/game', maxRequests: 120, windowMs: 60_000, bucket: 'betweenle-all' },
     { paths: ['/game/guess'], maxRequests: 45, windowMs: 60_000, bucket: 'betweenle-play' },
   ],
-  completeEmbed: { title: '🔤 Betweenle Results', color: 0x3b82f6, channelKey: 'betweenle' },
+  completeEmbed: { title: '🔤 Betweenle Results', color: 0x8f3f50, channelKey: 'betweenle' },
 };
 
 const server = new BaseGameServer(CONFIG);
