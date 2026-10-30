@@ -5,6 +5,7 @@ import { spawnConfetti } from './shared/confetti.js';
 
 let sessionUserId = null;
 let discordGuildId = null;
+let discordChannelId = null;
 let gameOver = false;
 let bounds = { lower: 'aaaaa', upper: 'zzzzz' };
 
@@ -220,6 +221,18 @@ async function submitGuess() {
   }
   input.value = '';
   render(data);
+  // On a fresh win, post results to the server's configured channel (same as
+  // the other games). Only fires here (a just-happened win), never on reload.
+  if (data.isWin && (discordChannelId || discordGuildId)) {
+    const u = getDiscordUser();
+    const username = u ? u.username : 'Someone';
+    const message = '🔤 **' + username + '** solved today\'s Betweenle in **' + data.guessesUsed + '** guesses — score **' + data.score + '/5**!';
+    fetch('/game/complete', {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ channelId: discordChannelId, serverId: discordGuildId, message }),
+    }).catch(e => console.error('Failed to post results:', e));
+  }
   // Keep focus so the mobile keyboard stays up (and doesn't flash out/in).
   if (!data.isComplete) input.focus();
 }
@@ -242,7 +255,7 @@ $('go-close').addEventListener('click', () => $('game-over').classList.remove('a
 async function boot() {
   buildKeyboard();
   const discord = await initDiscord();
-  if (discord) { sessionUserId = discord.user.id; discordGuildId = discord.guildId; }
+  if (discord) { sessionUserId = discord.user.id; discordGuildId = discord.guildId; discordChannelId = discord.channelId; }
   await loadState();
   $('guess-input').focus();
 }
