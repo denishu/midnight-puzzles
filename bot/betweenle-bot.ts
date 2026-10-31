@@ -4,7 +4,7 @@ import { BaseBotApplication } from './shared/BaseBotApplication';
 import { resolveSendableChannel } from './shared/resolveSendableChannel';
 import { Logger } from '../core/utils/Logger';
 import { puzzleNumber } from '../core/utils/puzzleNumber';
-import { BetweenleGame, BetweenleState, BetweenleWords, MAX_GUESSES, guessesRemaining } from '../games/betweenle';
+import { BetweenleGame, BetweenleState, BetweenleWords, MAX_GUESSES, guessesRemaining, scoreDots } from '../games/betweenle';
 import { EmbedBuilder } from '../core/discord/EmbedBuilder';
 import { DatabaseConnectionFactory } from '../core/storage/DatabaseConnection';
 import { UserRepository } from '../core/storage/UserRepository';
@@ -101,7 +101,8 @@ export class BetweenleBot extends BaseBotApplication {
             const lines = serverSessions.map(s => {
               const won = s.result?.isWin;
               const guessCount = s.result?.guessCount ?? s.gameData?.guesses?.length ?? '?';
-              const score = won ? `${s.result?.score ?? '?'}/5` : '❌ DNF';
+              const sc = s.result?.score ?? 0;
+              const score = won ? `${scoreDots(sc)} ${sc}/5` : '❌ DNF';
               return `**${s.username}** — ${score} (${guessCount} guesses)`;
             });
             recapEmbed.setDescription(lines.join('\n'));
@@ -225,7 +226,7 @@ export class BetweenleBot extends BaseBotApplication {
         embed.addFields({
           name: state.isWin ? '🎉 Solved!' : '❌ Out of guesses',
           value: state.isWin
-            ? `**${state.secret}** in ${state.guesses.length} guesses — score ${state.score}/5`
+            ? `**${state.secret}** in ${state.guesses.length} guesses — ${scoreDots(state.score)} ${state.score}/5`
             : `The word was **${state.secret}**.`,
           inline: false,
         });
@@ -238,7 +239,7 @@ export class BetweenleBot extends BaseBotApplication {
       if (state.isWin) {
         const puzzleNo = puzzleNumber(new Date());
         const rEmbed = EmbedBuilder.createGameEmbed('betweenle', `🔤 Betweenle #${puzzleNo} Results`);
-        rEmbed.setDescription(`**${interaction.user.username}** solved it — ${state.score}/5 (${state.guesses.length} guesses)`);
+        rEmbed.setDescription(`**${interaction.user.username}** solved it — ${scoreDots(state.score)} ${state.score}/5 (${state.guesses.length} guesses)`);
         await interaction.followUp({ embeds: [rEmbed], ephemeral: false });
       }
     } catch (error) {
@@ -264,7 +265,7 @@ export class BetweenleBot extends BaseBotApplication {
       const puzzleNo = puzzleNumber(new Date());
       const embed = EmbedBuilder.createGameEmbed('betweenle', `🔤 Betweenle #${puzzleNo} Results`);
       embed.setDescription(state.isWin
-        ? `**${interaction.user.username}** — ${state.score}/5 (${state.guesses.length} guesses)`
+        ? `**${interaction.user.username}** — ${scoreDots(state.score)} ${state.score}/5 (${state.guesses.length} guesses)`
         : `**${interaction.user.username}** — DNF`);
       await interaction.editReply({ embeds: [embed] });
     } catch (error) {

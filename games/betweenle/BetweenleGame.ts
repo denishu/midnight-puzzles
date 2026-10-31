@@ -3,6 +3,19 @@ import { BetweenleWords } from './BetweenleWords';
 /** Max guesses allowed before the game is lost. */
 export const MAX_GUESSES = 14;
 
+/** Highest possible score (one filled dot per point). */
+export const MAX_SCORE = 5;
+
+/**
+ * Render a score (0-5) as filled/empty circle emoji, e.g. 3 -> "🔴🔴🔴⚪⚪".
+ * Used in result embeds + the Activity results post so the number reads more
+ * expressively (mirrors the Activity scoreboard).
+ */
+export function scoreDots(score: number): string {
+  const n = Math.max(0, Math.min(MAX_SCORE, Math.round(score)));
+  return '🔴'.repeat(n) + '⚪'.repeat(MAX_SCORE - n);
+}
+
 /**
  * Score bands by guess count: solving within the first 5 guesses scores 5,
  * the next 3 score 4, the next 3 score 3, the next 2 score 2, the last 1
