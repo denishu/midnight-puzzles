@@ -50,17 +50,20 @@ midnight-puzzles/
 │   ├── shared/              # BaseBotApplication, command registry
 │   ├── semantle-bot.ts
 │   ├── travle-bot.ts
-│   └── duotrigordle-bot.ts
+│   ├── duotrigordle-bot.ts
+│   └── betweenle-bot.ts
 ├── web/                     # Web Activity frontends (one per game)
 │   ├── semantle/            # Express server (port 3001) + UI
 │   ├── travle/              # Express server (port 3002) + Leaflet map UI
 │   ├── duotrigordle/        # Express server (port 3003) + 32-grid UI
+│   ├── betweenle/           # Express server (port 3004) + number-line UI
 │   ├── landing/             # Static landing page
 │   └── shared/              # Design tokens
 ├── games/                   # Pure game logic (no Discord dependency)
 │   ├── semantle/            # SemanticEngine, SemantleGame, SimilarityCalculator
 │   ├── travle/              # CountryGraph, TravleGame, PuzzleGenerator
-│   └── duotrigordle/        # GridManager, WordValidator, ProgressTracker
+│   ├── duotrigordle/        # GridManager, WordValidator, ProgressTracker
+│   └── betweenle/           # BetweenleGame, BetweenleWords (alphabetical rank/distance)
 ├── core/                    # Shared infrastructure
 │   ├── discord/             # EmbedBuilder, InteractionHandler, MessageFormatter
 │   ├── storage/             # Repositories, migrations, SQLite/PostgreSQL schemas
@@ -69,7 +72,7 @@ midnight-puzzles/
 ├── data/                    # Static game data
 │   ├── dictionaries/        # GloVe vectors, word lists, proper noun blacklist
 │   └── geography/           # Country adjacency graph (196 countries)
-├── tests/                   # Jest unit tests (30 Duotrigordle + Semantle + Travle)
+├── tests/                   # Jest unit tests (Semantle, Travle, Duotrigordle, Betweenle)
 ├── scripts/                 # Utility & ops scripts — see scripts/README.md
 │                            #   (streak backfill/prune, guild audit, diagnostics)
 └── assets/                  # Logos and screenshots
@@ -79,7 +82,7 @@ midnight-puzzles/
 
 ### Prerequisites
 - Node.js 18+
-- Three Discord applications (one per game) with Bot and Activity enabled
+- Four Discord applications (one per game) with Bot and Activity enabled
 
 ### Install and Configure
 
@@ -95,6 +98,7 @@ cp .env.example .env
 npm run deploy:semantle
 npm run deploy:travle
 npm run deploy:duotrigordle
+npm run deploy:betweenle
 ```
 
 ### Run in Development
@@ -104,11 +108,13 @@ npm run deploy:duotrigordle
 npm run dev:semantle
 npm run dev:travle
 npm run dev:duotrigordle
+npm run dev:betweenle
 
 # Web Activities
 npm run dev:semantle-web     # port 3001
 npm run dev:travle-web       # port 3002
 npm run dev:duotrigordle-web # port 3003
+npm run dev:betweenle-web    # port 3004
 ```
 
 For Activities to work inside Discord, you need a tunnel (e.g., `cloudflared`) pointing to each web server, with the URL mapped in the Discord dev portal under Activities.
@@ -131,12 +137,12 @@ See `.env.example` for the full list. Each game needs:
 ## Database
 
 SQLite for development (auto-created per-game `.db` files), PostgreSQL for
-production via `DATABASE_URL`. Observed in production: all three games' rows
-(servers, users, sessions, streaks) live in a single shared database — a lone
-`check-streaks.js` run returns semantle, travle, and duotrigordle rows together,
-and the per-game `*-bot.db` filenames are dev-only sqlite defaults that don't
-exist on the prod box. The bot and web server for the same game always share the
-same database.
+production via `DATABASE_URL`. Observed in production: all games' rows (servers,
+users, sessions, streaks) live in a single shared database — a lone
+`check-streaks.js` run returns semantle, travle, duotrigordle, and betweenle
+rows together, and the per-game `*-bot.db` filenames are dev-only sqlite
+defaults that don't exist on the prod box. The bot and web server for the same
+game always share the same database.
 
 ## Daily Flow
 
