@@ -205,6 +205,10 @@ a { color: inherit; text-decoration: none; }
   background: rgba(52, 211, 153, 0.1); color: var(--accent);
   border-color: rgba(52, 211, 153, 0.2);
 }
+.tag-cranberry {
+  background: rgba(143, 63, 80, 0.15); color: #c85a74;
+  border-color: rgba(143, 63, 80, 0.4);
+}
 .bot-info h3 {
   font-size: clamp(32px, 5vw, 48px); font-weight: 900; margin-bottom: 16px;
 }

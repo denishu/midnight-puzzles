@@ -1,10 +1,11 @@
 # Midnight Puzzles
 
-A suite of three daily puzzle games for Discord, each playable through both slash commands and embedded Discord Activities (web UIs inside Discord).
+A suite of four daily puzzle games for Discord, each playable through both slash commands and embedded Discord Activities (web UIs inside Discord).
 
 - **Semantle** — guess the secret word using semantic similarity scores
 - **Travle** — connect two countries by hopping through land borders
 - **Duotrigordle** — solve 32 Wordle puzzles simultaneously in 37 guesses
+- **Betweenle** — find the secret word by alphabetical order, binary-search style
 
 ## How It Works
 
@@ -34,6 +35,12 @@ Connect two countries through their land borders in as few guesses as possible. 
 
 - Bot: `/play`, `/results`, `/help`, `/setchannel` (no `/guess` — Activity only)
 - Activity: 4×8 grid layout with letter overlays, QWERTY keyboard with cross-grid letter tracking, early loss detection with give-up option
+
+### 🔤 Betweenle
+Find the daily secret 5-letter word by **alphabetical order** (not meaning). Each guess is marked before/after the secret in the dictionary, with a distance showing how close you are (percent of the dictionary between the guess and the secret). Binary-search your way to the answer in 14 guesses; score is 5/4/3/2/1 based on which guess cluster (5-3-3-2-1) you solve in. Answers come from the curated Wordle answer list; any word in the larger valid-guesses list is accepted.
+
+- Bot: `/play`, `/guess`, `/results`, `/streak`, `/help`, `/setchannel`
+- Activity: cranberry/hermit-crab theme, a number line showing the tightening bounds with a proportional position dot, an A–Z letter line that greys out-of-range letters as you type, and a 5-3-3-2-1 dot scoreboard
 
 ## Project Structure
 
