@@ -106,6 +106,13 @@ export class BetweenleBot extends BaseBotApplication {
               return `**${s.username}** — ${score} (${guessCount} guesses)`;
             });
             recapEmbed.setDescription(lines.join('\n'));
+            // Server streak footer (from the streaks table — same source as
+            // /streak; updateStreaks already ran earlier this job so it's current).
+            const serverStreak = await this.streakRepo.getServerStreak(guild.id, 'betweenle');
+            const streakCount = serverStreak?.currentCount ?? 0;
+            if (streakCount > 0) {
+              recapEmbed.setFooter({ text: `🔥 Server streak: ${streakCount} day${streakCount === 1 ? '' : 's'}` });
+            }
             await (channel as any).send({ embeds: [recapEmbed] });
           }
 
