@@ -227,7 +227,7 @@ async function submitGuess() {
     const u = getDiscordUser();
     const username = u ? u.username : 'Someone';
     const dots = '🔴'.repeat(data.score) + '⚪'.repeat(5 - data.score);
-    const message = '🔤 **' + username + '** solved today\'s Betweenle in **' + data.guessesUsed + '** guesses — ' + dots + ' **' + data.score + '/5**!';
+    const message = '🔤 **' + username + '** solved today\'s Betweenle in **' + data.guessesUsed + '** guesses!\n\n' + dots + ' ' + data.score + '/5';
     fetch('/game/complete', {
       method: 'POST',
       headers: authHeaders({ 'Content-Type': 'application/json' }),

@@ -246,7 +246,7 @@ export class BetweenleBot extends BaseBotApplication {
       if (state.isWin) {
         const puzzleNo = puzzleNumber(new Date());
         const rEmbed = EmbedBuilder.createGameEmbed('betweenle', `🔤 Betweenle #${puzzleNo} Results`);
-        rEmbed.setDescription(`**${interaction.user.username}** solved it — ${scoreDots(state.score)} ${state.score}/5 (${state.guesses.length} guesses)`);
+        rEmbed.setDescription(`**${interaction.user.username}** solved today's Betweenle in ${state.guesses.length} guesses!\n\n${scoreDots(state.score)} ${state.score}/5`);
         await interaction.followUp({ embeds: [rEmbed], ephemeral: false });
       }
     } catch (error) {
