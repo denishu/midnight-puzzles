@@ -119,9 +119,12 @@ function focusGrid(idx, { scroll = true } = {}) {
   renderNumberLine(lastGridsData);
 
   // Scroll the targeted grid into view (only when focusing, not unfocusing).
+  // Align its BOTTOM to the viewport bottom (block: 'end') rather than centering
+  // it — for a tall grid with many guesses, centering pushes the latest rows
+  // (and the word being typed) below the fold, forcing extra scrolling.
   if (scroll && focusedGrid !== null) {
     const target = area.querySelector('.mini-grid[data-grid-index="' + focusedGrid + '"]');
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }
 
   document.getElementById('guess-input').focus();
