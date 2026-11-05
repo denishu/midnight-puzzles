@@ -121,6 +121,15 @@ body {
   outline: none; transition: border-color var(--t-fast), box-shadow var(--t-fast);
 }
 #guess-input:focus { border-color: var(--game-accent); box-shadow: 0 0 0 3px hsla(344, 52%, 57%, 0.2); }
+#submit-btn {
+  padding: 12px 20px; border-radius: var(--radius-md); border: none;
+  background: var(--game-accent); color: #fff;
+  font-family: var(--font-body);
+  font-weight: 700; font-size: 14px; cursor: pointer;
+  transition: filter var(--t-fast), transform var(--t-fast);
+}
+#submit-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+#submit-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
 #status { text-align: center; min-height: 20px; margin-top: var(--space-2); font-size: 14px; color: hsl(0, 70%, 68%); }
 #status.ok { color: var(--chartreuse); }
 
@@ -205,6 +214,7 @@ body {
     <div id="entry">
       <div id="row-input">
         <input id="guess-input" type="text" maxlength="5" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="type a 5-letter word" />
+        <button id="submit-btn">Guess</button>
       </div>
       <div id="status"></div>
       <div id="scoreboard"></div>

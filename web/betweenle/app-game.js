@@ -134,6 +134,7 @@ function render(state) {
 
   if (state.isComplete) {
     $('guess-input').disabled = true;
+    $('submit-btn').disabled = true;
     showGameOver(state);
   }
   updateKeyboardGreying();
@@ -249,6 +250,11 @@ inputEl.addEventListener('input', () => {
 inputEl.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); submitGuess(); }
 });
+// Guess button: prevent it from stealing focus from the input (keeps the mobile
+// keyboard up), then submit.
+const submitBtn = $('submit-btn');
+submitBtn.addEventListener('mousedown', (e) => e.preventDefault());
+submitBtn.addEventListener('click', () => submitGuess());
 $('info-btn').addEventListener('click', () => $('info-popup').classList.add('active'));
 $('info-close').addEventListener('click', () => $('info-popup').classList.remove('active'));
 $('go-close').addEventListener('click', () => $('game-over').classList.remove('active'));
