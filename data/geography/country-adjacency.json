@@ -534,8 +534,7 @@
   "lithuania": [
     "belarus",
     "latvia",
-    "poland",
-    "russia"
+    "poland"
   ],
   "luxembourg": [
     "belgium",
@@ -710,7 +709,6 @@
     "czech republic",
     "germany",
     "lithuania",
-    "russia",
     "slovakia",
     "ukraine"
   ],
@@ -737,11 +735,9 @@
     "georgia",
     "kazakhstan",
     "latvia",
-    "lithuania",
     "mongolia",
     "north korea",
     "norway",
-    "poland",
     "ukraine"
   ],
   "rwanda": [
