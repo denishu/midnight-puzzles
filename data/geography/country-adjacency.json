@@ -11,8 +11,7 @@
     "greece",
     "kosovo",
     "montenegro",
-    "north macedonia",
-    "serbia"
+    "north macedonia"
   ],
   "algeria": [
     "libya",
@@ -27,7 +26,6 @@
     "spain"
   ],
   "angola": [
-    "congo",
     "democratic republic of the congo",
     "namibia",
     "zambia"
@@ -61,8 +59,7 @@
     "armenia",
     "georgia",
     "iran",
-    "russia",
-    "turkey"
+    "russia"
   ],
   "bahamas": [],
   "bahrain": [],
@@ -213,7 +210,6 @@
   ],
   "comoros": [],
   "congo": [
-    "angola",
     "cameroon",
     "central african republic",
     "democratic republic of the congo",
@@ -226,7 +222,6 @@
   "croatia": [
     "bosnia and herzegovina",
     "hungary",
-    "italy",
     "montenegro",
     "serbia",
     "slovenia"
@@ -440,7 +435,6 @@
   ],
   "italy": [
     "austria",
-    "croatia",
     "france",
     "san marino",
     "slovenia",
@@ -568,7 +562,6 @@
   "mauritania": [
     "algeria",
     "mali",
-    "morocco",
     "senegal"
   ],
   "mauritius": [],
@@ -597,8 +590,7 @@
     "serbia"
   ],
   "morocco": [
-    "algeria",
-    "mauritania"
+    "algeria"
   ],
   "mozambique": [
     "eswatini",
@@ -716,8 +708,7 @@
     "spain"
   ],
   "qatar": [
-    "saudi arabia",
-    "united arab emirates"
+    "saudi arabia"
   ],
   "romania": [
     "bulgaria",
@@ -771,7 +762,6 @@
     "mauritania"
   ],
   "serbia": [
-    "albania",
     "bosnia and herzegovina",
     "bulgaria",
     "croatia",
@@ -897,7 +887,6 @@
   ],
   "turkey": [
     "armenia",
-    "azerbaijan",
     "bulgaria",
     "georgia",
     "greece",
@@ -930,7 +919,6 @@
   ],
   "united arab emirates": [
     "oman",
-    "qatar",
     "saudi arabia"
   ],
   "united kingdom": [
