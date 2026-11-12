@@ -222,13 +222,20 @@ async function submitGuess() {
   }
   input.value = '';
   render(data);
-  // On a fresh win, post results to the server's configured channel (same as
-  // the other games). Only fires here (a just-happened win), never on reload.
-  if (data.isWin && (discordChannelId || discordGuildId)) {
+  // When the game just finished (win or loss), post results to the server's
+  // configured channel (same as the other games). Only fires here (a
+  // just-happened completion), never on reload.
+  if (data.isComplete && (discordChannelId || discordGuildId)) {
     const u = getDiscordUser();
     const username = u ? u.username : 'Someone';
-    const dots = '🔴'.repeat(data.score) + '⚪'.repeat(5 - data.score);
-    const message = '🔤 **' + username + '** solved today\'s Betweenle in **' + data.guessesUsed + '** guesses!\nScore: ' + data.score + '/5\n' + dots;
+    let message;
+    if (data.isWin) {
+      const dots = '🔴'.repeat(data.score) + '⚪'.repeat(5 - data.score);
+      message = '🔤 **' + username + '** solved today\'s Betweenle in **' + data.guessesUsed + '** guesses!\nScore: ' + data.score + '/5\n' + dots;
+    } else {
+      // Don't reveal the secret word in the channel post (spoiler for others).
+      message = '🔤 **' + username + '** — ❌ DNF\nDidn\'t solve today\'s Betweenle in ' + data.guessesUsed + '/' + data.maxGuesses + ' guesses';
+    }
     fetch('/game/complete', {
       method: 'POST',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
